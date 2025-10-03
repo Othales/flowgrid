@@ -63,7 +63,15 @@ func (a *App) startHTTPServer() *http.Server {
 	mux.HandleFunc("/api/bgp/peers", a.authMiddleware(a.handleBGPPeers))
 
 	// frontend
-	mux.Handle("/", http.FileServer(http.Dir("./frontend")))
+	frontendFS := http.Dir("./frontend")
+	fileServer := http.FileServer(frontendFS)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" || !strings.Contains(r.URL.Path, ".") {
+			http.ServeFile(w, r, "./frontend/index.html")
+			return
+		}
+		fileServer.ServeHTTP(w, r)
+	})
 
 	mux.HandleFunc("/flows", a.handleFlows)
 	mux.HandleFunc("/health", a.handleHealth)

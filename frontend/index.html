@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FlowGrid Console</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-3hK9EevWjGXogjHG6E8Qd38H9kspC5bGEMJXn2YgTh+z9U80qgzkGmHg56k97Ze3gSdz8sSU1yN1sEv0gY5xkw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at top, rgba(23, 162, 184, 0.25), transparent 60%), var(--bs-body-bg);
+        }
+        #app-view.d-none,
+        #login-view.d-none {
+            display: none !important;
+        }
+        .nav-pills .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .nav-pills .nav-link i {
+            font-size: 1.1rem;
+        }
+        .tab-pane {
+            padding-top: 1.5rem;
+        }
+        .card-table {
+            max-height: 320px;
+            overflow: auto;
+        }
+        .alerts-flowchart {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+        }
+        .alert-flow-step {
+            flex: 1 1 200px;
+            min-width: 180px;
+            background-color: rgba(255,255,255,0.04);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+        }
+        .alert-flow-step i {
+            font-size: 1.75rem;
+            color: var(--bs-primary);
+            margin-bottom: 0.5rem;
+        }
+        .alert-flow-metric {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        .alert-flow-detail {
+            color: var(--bs-secondary);
+        }
+        .alert-flow-arrow {
+            align-self: center;
+            color: var(--bs-secondary);
+            font-size: 1.5rem;
+        }
+        @media (max-width: 991.98px) {
+            .alert-flow-arrow {
+                display: none;
+            }
+        }
+        pre {
+            background-color: rgba(255,255,255,0.05);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            max-height: 360px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5" id="login-view">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow border-0">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-3">
+                            <i class="fa-solid fa-diagram-project fa-3x text-primary"></i>
+                            <h1 class="h4 mt-3">FlowGrid</h1>
+                            <p class="text-secondary">Autentique-se para acessar o painel</p>
+                        </div>
+                        <form id="login-form" novalidate>
+                            <div class="mb-3">
+                                <label for="login-user" class="form-label">Usuário</label>
+                                <input type="text" class="form-control" id="login-user" autocomplete="username" value="admin" required />
+                            </div>
+                            <div class="mb-3">
+                                <label for="login-pass" class="form-label">Senha</label>
+                                <input type="password" class="form-control" id="login-pass" autocomplete="current-password" required />
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Entrar</button>
+                            <div class="form-text mt-3" id="login-feedback"></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid py-4 d-none" id="app-view">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+            <div>
+                <h1 class="h3 mb-0">FlowGrid Console</h1>
+                <div class="text-secondary" id="session-info"></div>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <button class="btn btn-outline-secondary" id="refresh-all">
+                    <i class="fa-solid fa-rotate"></i>
+                    Atualizar
+                </button>
+                <button class="btn btn-outline-danger" id="logout-btn">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    Sair
+                </button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-lg-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="nav flex-column nav-pills" id="app-tabs" role="tablist">
+                            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-dashboard" type="button" role="tab">
+                                <i class="fa-solid fa-chart-line"></i>Dashboard
+                            </button>
+                            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-routers" type="button" role="tab">
+                                <i class="fa-solid fa-network-wired"></i>Roteadores & SNMP
+                            </button>
+                            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-alerts" type="button" role="tab">
+                                <i class="fa-solid fa-bell"></i>Alertas
+                            </button>
+                            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-config" type="button" role="tab">
+                                <i class="fa-solid fa-sliders"></i>Configuração
+                            </button>
+                            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-whitelist" type="button" role="tab">
+                                <i class="fa-solid fa-shield"></i>Whitelist & Firewall
+                            </button>
+                            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-management" type="button" role="tab">
+                                <i class="fa-solid fa-toolbox"></i>Administração
+                            </button>
+                            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-data" type="button" role="tab">
+                                <i class="fa-solid fa-table"></i>Dados ao vivo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-9">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="tab-content" id="tab-content">
+                            <div class="tab-pane fade show active" id="tab-dashboard" role="tabpanel">
+                                <div class="row g-3" id="system-cards"></div>
+                                <div class="row g-3 mt-1">
+                                    <div class="col-lg-4">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h2 class="h5">Estatísticas Gerais</h2>
+                                                <dl class="row" id="stats-overview"></dl>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h2 class="h5">Top Fontes</h2>
+                                                <div class="card-table">
+                                                    <table class="table table-sm table-dark align-middle" id="top-sources-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Fonte</th>
+                                                                <th>Vendor</th>
+                                                                <th>Bytes</th>
+                                                                <th>%</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h2 class="h5">Top Aplicações</h2>
+                                                <div class="card-table">
+                                                    <table class="table table-sm table-dark align-middle" id="top-apps-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Proto</th>
+                                                                <th>Porta</th>
+                                                                <th>Bytes</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tab-routers" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h2 class="h5 mb-3">Visão geral SNMP</h2>
+                                                <div class="row g-3" id="router-summary">
+                                                    <div class="col-12 text-secondary">Carregue os dados para visualizar a saúde dos roteadores.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h2 class="h5 mb-0">Roteadores configurados</h2>
+                                                    <button class="btn btn-outline-primary btn-sm" id="reload-routers"><i class="fa-solid fa-rotate"></i> Atualizar lista</button>
+                                                </div>
+                                                <div class="table-responsive card-table">
+                                                    <table class="table table-dark table-striped align-middle" id="routers-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Nome</th>
+                                                                <th>Vendor</th>
+                                                                <th>IP</th>
+                                                                <th>SNMP</th>
+                                                                <th>Ações</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h2 class="h5">Adicionar Roteador</h2>
+                                                <form id="router-form" class="row g-3">
+                                                    <div class="col-md-4">
+                                                        <label class="form-label" for="router-name">Nome</label>
+                                                        <input class="form-control" id="router-name" required />
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label" for="router-vendor">Vendor</label>
+                                                        <select class="form-select" id="router-vendor"></select>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label" for="router-ip">IP SNMP</label>
+                                                        <input class="form-control" id="router-ip" placeholder="192.0.2.1" required />
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label" for="router-community">Community</label>
+                                                        <input class="form-control" id="router-community" value="public" />
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label" for="router-port">Porta</label>
+                                                        <input class="form-control" id="router-port" type="number" value="161" min="1" max="65535" />
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <label class="form-label" for="router-version">Versão</label>
+                                                        <select class="form-select" id="router-version">
+                                                            <option value="2c">SNMP v2c</option>
+                                                            <option value="3">SNMP v3</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-12 text-end">
+                                                        <button class="btn btn-primary" type="submit">Adicionar</button>
+                                                    </div>
+                                                </form>
+                                                <hr />
+                                                <h3 class="h6">Teste SNMP</h3>
+                                                <form id="snmp-test-form" class="row g-3">
+                                                    <div class="col-md-4"><input class="form-control" id="snmp-test-ip" placeholder="IP" required /></div>
+                                                    <div class="col-md-3"><input class="form-control" id="snmp-test-community" placeholder="Community" value="public" /></div>
+                                                    <div class="col-md-2"><input class="form-control" id="snmp-test-port" type="number" value="161" min="1" max="65535" /></div>
+                                                    <div class="col-md-3 text-end"><button class="btn btn-outline-light" type="submit">Executar</button></div>
+                                                </form>
+                                                <div class="form-text" id="snmp-test-result"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tab-alerts" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-lg-7">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h2 class="h5 mb-0">Regras de alerta</h2>
+                                                    <button class="btn btn-outline-primary btn-sm" id="reload-alerts"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+                                                </div>
+                                                <div class="card-table">
+                                                    <table class="table table-dark table-striped" id="alerts-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Nome</th>
+                                                                <th>Status</th>
+                                                                <th>Filtro</th>
+                                                                <th>Ações</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-5">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h2 class="h5">Nova Regra</h2>
+                                                <form id="alert-form" class="row g-3">
+                                                    <div class="col-12">
+                                                        <label class="form-label" for="alert-name">Nome</label>
+                                                        <input class="form-control" id="alert-name" required />
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label" for="alert-filter">Filtro</label>
+                                                        <textarea class="form-control" id="alert-filter" rows="2" placeholder="DstPort=53"></textarea>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label" for="alert-condition">Condição</label>
+                                                        <input class="form-control" id="alert-condition" placeholder="bytes > 1000000" />
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label" for="alert-window">Janela (segundos)</label>
+                                                        <input class="form-control" id="alert-window" type="number" value="60" min="1" />
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label" for="alert-actions">Ações (separadas por vírgula)</label>
+                                                        <input class="form-control" id="alert-actions" placeholder="notify,block" />
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label" for="alert-comment">Comentário</label>
+                                                        <textarea class="form-control" id="alert-comment" rows="2"></textarea>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" id="alert-enabled" checked />
+                                                            <label class="form-check-label" for="alert-enabled">Ativo</label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12 text-end">
+                                                        <button class="btn btn-primary" type="submit">Criar Regra</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row g-3 mt-1">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h2 class="h5 mb-3">Fluxograma do pipeline de alertas</h2>
+                                                <div class="alerts-flowchart" id="alerts-flowchart">
+                                                    <div class="text-secondary">Aguardando atualização dos dados para montar o fluxo.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tab-config" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h2 class="h5 mb-0">Configuração atual</h2>
+                                                    <button class="btn btn-outline-primary btn-sm" id="reload-config"><i class="fa-solid fa-rotate"></i> Recarregar</button>
+                                                </div>
+                                                <pre id="config-view"></pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h2 class="h5">Atualizar configuração</h2>
+                                                <p class="text-secondary">Envie apenas os campos que deseja alterar (JSON válido).</p>
+                                                <textarea class="form-control" id="config-editor" rows="6" placeholder='{"netflow_port": 2055}'></textarea>
+                                                <div class="text-end mt-3">
+                                                    <button class="btn btn-primary" id="save-config">Aplicar</button>
+                                                </div>
+                                                <div class="form-text" id="config-feedback"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tab-whitelist" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h2 class="h5">Whitelist atual</h2>
+                                                <pre id="whitelist-view"></pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h2 class="h5">Editar whitelist</h2>
+                                                <textarea class="form-control" id="whitelist-editor" rows="8" placeholder='{"ips": [], "cidrs": []}'></textarea>
+                                                <div class="text-end mt-3">
+                                                    <button class="btn btn-primary" id="save-whitelist">Salvar</button>
+                                                </div>
+                                                <div class="form-text" id="whitelist-feedback"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h2 class="h5">Status do Firewall</h2>
+                                                <dl class="row" id="firewall-status"></dl>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tab-management" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-lg-6">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h2 class="h5">Ações</h2>
+                                                <div class="d-grid gap-2">
+                                                    <button class="btn btn-outline-warning" data-action="/api/management/snmp-refresh">Atualizar SNMP</button>
+                                                    <button class="btn btn-outline-info" data-action="/api/management/cache-clear">Limpar caches</button>
+                                                    <button class="btn btn-outline-danger" data-action="/api/management/restart">Reiniciar serviço</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <div class="card h-100">
+                                            <div class="card-body">
+                                                <h2 class="h5">Dashboards Grafana</h2>
+                                                <ul class="list-group" id="grafana-list"></ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h2 class="h5">Peers BGP</h2>
+                                                <div class="card-table">
+                                                    <table class="table table-dark table-striped" id="bgp-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Router</th>
+                                                                <th>Peer</th>
+                                                                <th>ASN</th>
+                                                                <th>Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tab-data" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h2 class="h5">Interfaces conhecidas</h2>
+                                                <div class="card-table">
+                                                    <table class="table table-dark table-striped" id="interfaces-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Dispositivo</th>
+                                                                <th>Interface</th>
+                                                                <th>Descrição</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h2 class="h5">Flows recentes</h2>
+                                                    <div class="input-group input-group-sm" style="width: 160px;">
+                                                        <span class="input-group-text">Limite</span>
+                                                        <input type="number" class="form-control" id="flow-limit" value="20" min="1" max="500" />
+                                                    </div>
+                                                </div>
+                                                <div class="card-table">
+                                                    <table class="table table-dark table-striped" id="flows-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Fonte</th>
+                                                                <th>Src → Dst</th>
+                                                                <th>Proto/Porta</th>
+                                                                <th>Bytes</th>
+                                                                <th>Hora</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/app.js" type="module"></script>
+</body>
+</html>
