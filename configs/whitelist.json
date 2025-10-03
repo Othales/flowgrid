@@ -1,0 +1,14 @@
+{
+  "ips": [
+    "8.8.8.8",
+    "8.8.4.4",
+    "1.1.1.1",
+    "1.0.0.1"
+  ],
+  "cidrs": [
+    "173.194.0.0/16", 
+    "104.16.0.0/13",
+    "104.24.0.0/14"
+  ],
+  "comment": "IPs de DNS públicos (Google, Cloudflare) e exemplos de CIDRs da Google e Cloudflare. Adicione outros IPs/redes confiáveis aqui."
+}

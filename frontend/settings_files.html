@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RR Flow : Arquivos de Configuração</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        :root { --sidebar-width: 260px; --header-height: 60px; }
+        body { background-color: var(--bs-tertiary-bg); }
+        /* ... (CSS completo do layout) ... */
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        </nav>
+    <div class="main-content">
+        <header class="page-header"><h3 class="h4 mb-0">Arquivos de Configuração</h3></header>
+        <main class="page-content" role="main">
+            <div class="container-fluid">
+                <div class="row g-4">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title"><i class="fas fa-file-code me-2"></i> config.json</h5>
+                                <p class="card-text text-muted flex-grow-1">Configurações globais do sistema.</p>
+                                <a href="/edit/config.json" class="btn btn-primary mt-auto">
+                                    <i class="fas fa-edit me-2"></i> Editar Arquivo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title"><i class="fas fa-file-code me-2"></i> peers.json</h5>
+                                <p class="card-text text-muted flex-grow-1">Lista de peers BGP e suas configurações.</p>
+                                <a href="/edit/peers.json" class="btn btn-primary mt-auto">
+                                    <i class="fas fa-edit me-2"></i> Editar Arquivo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

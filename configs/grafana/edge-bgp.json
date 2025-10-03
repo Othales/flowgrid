@@ -1,0 +1,5 @@
+{
+  "title": "BGP Edge Peers",
+  "description": "Relatório dos peers externos monitorados pelo FlowGrid",
+  "version": 1
+}

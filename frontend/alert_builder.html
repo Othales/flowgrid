@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RR Flow : Construtor de Alertas</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        /* ... (CSS completo do layout) ... */
+        .flowchart { display: flex; flex-direction: column; gap: 1.25rem; align-items: center; }
+        .flow-block { border: 1px dashed var(--bs-border-color); padding: 1.5rem; border-radius: .75rem; width: 100%; max-width: 800px; background-color: var(--bs-tertiary-bg); position: relative; }
+        .flow-block .form-select, .flow-block .form-control { display: inline-block; width: auto; min-width: 150px; vertical-align: middle; }
+        .flow-arrow { font-size: 2rem; color: var(--bs-border-color-translucent); }
+        .block-header { font-weight: bold; margin-bottom: 1rem; color: var(--bs-primary); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+        .block-content { font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        </nav>
+    <div class="main-content">
+        <header class="page-header"><h3 class="h4 mb-0">Construtor de Alertas</h3></header>
+        <main class="page-content" role="main">
+            <div class="container-fluid">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Novo Alerta</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <label for="ruleName" class="form-label fw-bold">Nome da Regra</label>
+                            <input type="text" id="ruleName" class="form-control form-control-lg" placeholder="Ex: Alerta de Alta Utilização de CPU">
+                        </div>
+                        <div class="flowchart">
+                            <div class="flow-block">
+                                <div class="block-header"><i class="fas fa-play-circle me-2"></i> Gatilho</div>
+                                <div class="block-content"><span>QUANDO a métrica</span><select class="form-select mx-2 fw-bold"><option>Uso de CPU (%)</option><option>Uso de Memória (%)</option></select><span>for coletada.</span></div>
+                            </div>
+                            <div class="flow-arrow"><i class="fas fa-arrow-down"></i></div>
+                            <div class="flow-block">
+                                <div class="block-header"><i class="fas fa-question-circle me-2"></i> Condição</div>
+                                <div class="block-content"><span>SE o valor</span><select class="form-select mx-2"><option selected>for maior que</option><option>for menor que</option></select><input type="number" class="form-control" placeholder="90" style="width: 100px;"><span>por mais de</span><input type="number" class="form-control" value="5" style="width: 80px;"><select class="form-select ms-2"><option>minutos</option><option>horas</option></select></div>
+                            </div>
+                            <div class="flow-arrow"><i class="fas fa-arrow-down"></i></div>
+                            <div class="flow-block">
+                                <div class="block-header"><i class="fas fa-bell me-2"></i> Ação</div>
+                                <div class="block-content"><span>ENTÃO, enviar notificação para</span><select class="form-select mx-2"><option selected>Telegram (Grupo Admin)</option><option>E-mail (NOC)</option></select></div>
+                            </div>
+                        </div>
+                        <hr class="my-4">
+                        <div class="text-center"><button class="btn btn-outline-secondary"><i class="fas fa-plus me-2"></i> Adicionar Condição (E)</button><button class="btn btn-primary btn-lg float-end"><i class="fas fa-save me-2"></i> Salvar Nova Regra</button></div>
+                    </div>
+                </div>
+                <h5 class="mt-5">Regras Ativas</h5>
+                <div class="list-group">
+                    <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div><strong>Alerta de Alta Utilização de CPU</strong><small class="d-block text-muted">Dispara quando CPU > 90% por 5 minutos.</small></div>
+                        <span class="badge bg-success rounded-pill">Ativo</span>
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div><strong>Alerta de Queda de Link</strong><small class="d-block text-muted">Dispara quando o tráfego em `eth0` for menor que 1 Mbps.</small></div>
+                        <span class="badge bg-secondary rounded-pill">Inativo</span>
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

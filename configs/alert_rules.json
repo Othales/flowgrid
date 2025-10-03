@@ -1,0 +1,38 @@
+[
+    {
+        "name": "Tráfego Elevado de ICMP (Multi-Borda)",
+        "enabled": true,
+        "filter": "Proto == 'ICMP' && Direction == 'inbound' && SamplerAddress in ['10.99.99.1']",
+        "condition": "Bps > 10485760 && Packets > 300000",
+        "time_window_seconds": 60,
+        "actions": ["log", "database", "webhook"],
+        "comment": "Traduzido da sua regra de ICMP. Dispara se o tráfego ICMP agregado para um único destino, vindo das bordas especificadas, passar de 10.4Mbps E 300k pacotes na janela de tempo."
+    },
+    {
+        "name": "Possível Ataque de Amplificação DNS (BORDA-RS)",
+        "enabled": true,
+        "filter": "Direction == 'inbound' && SrcPort == 53 && Proto == 'UDP' && Bpp > 512 && Bpp < 9000 && SamplerAddress == '10.99.99.1'",
+        "condition": "Bps > 1073741824",
+        "time_window_seconds": 60,
+        "actions": ["log", "database", "webhook"],
+        "comment": "Detecta tráfego UDP da porta 53 com pacotes grandes, típico de amplificação DNS, vindo especificamente da BORDA-RS. O alerta é sobre o BPS agregado dos fluxos que passaram no filtro."
+    },
+    {
+        "name": "Possível Ataque de Amplificação DNS (BORDA-SC)",
+        "enabled": true,
+        "filter": "Direction == 'inbound' && SrcPort == 53 && Proto == 'UDP' && Bpp > 600 && SamplerAddress == '10.99.99.1'",
+        "condition": "Bps > 1073741824",
+        "time_window_seconds": 60,
+        "actions": ["log", "database", "webhook"],
+        "comment": "Mesma lógica da regra anterior, mas para a BORDA-SC e com um filtro de BPP ligeiramente diferente."
+    },
+    {
+        "name": "Ataque Distribuído (Entropia de IPs)",
+        "enabled": true,
+        "filter": "Direction == 'inbound'",
+        "condition": "UniqueSrcIPs > 1000",
+        "time_window_seconds": 120,
+        "actions": ["log", "database", "webhook", "block"],
+        "comment": "REGRA BÔNUS: Detecta ataques de botnet. Dispara se mais de 1000 IPs de origem diferentes atingirem um único destino em 2 minutos. É uma regra de alta confiança."
+    }
+]

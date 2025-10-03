@@ -1,0 +1,88 @@
+{
+  "sources": [
+    {
+      "name": "Switch-Artinet",
+      "vendor": "Huawei",
+      "snmp": {
+        "ip": "10.99.99.1",
+        "version": "2c",
+        "port": 161,
+        "community": "Hu@W3i_SNMPv2"
+      }
+    },
+    {
+      "name": "Borda-Ei-Telecom",
+      "vendor": "Huawei",
+      "snmp": {
+        "ip": "45.70.131.32",
+        "version": "2c",
+        "port": 161,
+      "community": "Layer7_H"
+      }
+    }
+  ],
+  "snmp_enabled": true,
+  "netflow_port": 3055,
+  "sflow_port": 2055,
+  "http_port": 8080,
+  "data_path": "/var/cache",
+  "clickhouse_clean_time": 90,
+  "password": "admin",
+  "maximum_disk_gb": 70,
+  "api_network": ["0.0.0.0/0"],
+  "internal_ip_blocks": [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16"
+  ],
+  "internal_asns": [65000],
+  "favorite_ips": [
+    "8.8.8.8"
+  ],
+  "favorite_asns": [15169],
+  "ignored_ips": [],
+  "ignored_asns": [],
+  "favorite_services": [
+    "netflow",
+    "sflow"
+  ],
+  "notification": {
+    "telegram": {
+      "enabled": false,
+      "bot_token": "",
+      "chat_ids": [],
+      "reply_ids": [],
+      "notify_alerts": true,
+      "notify_system": true,
+      "proxy": ""
+    },
+    "email": {
+      "enabled": false,
+      "smtp_host": "smtp.example.com",
+      "smtp_port": 587,
+      "username": "",
+      "password": "",
+      "from": "flowgrid@example.com",
+      "to": [
+        "noc@example.com"
+      ],
+      "reply_to": [],
+      "use_tls": true,
+      "start_tls": true
+    }
+  },
+  "firewall": {
+    "netflow_allowed": [
+      "0.0.0.0/0"
+    ],
+    "sflow_allowed": [
+      "0.0.0.0/0"
+    ],
+    "api_allowed": [
+      "0.0.0.0/0"
+    ],
+    "interface_export": [
+      "0.0.0.0/0"
+    ]
+  }
+}
