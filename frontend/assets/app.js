@@ -30,9 +30,6 @@ const statsOverview = document.getElementById('stats-overview');
 const topSourcesTable = document.querySelector('#top-sources-table tbody');
 const topAppsTable = document.querySelector('#top-apps-table tbody');
 
-let sessionCache = null;
-let vendorsCache = [];
-
 function showToast(message, variant = 'info') {
     const wrapper = document.createElement('div');
     wrapper.className = `toast text-bg-${variant}`;
@@ -182,11 +179,6 @@ logoutBtn.addEventListener('click', async () => {
 });
 
 refreshAllBtn.addEventListener('click', async () => {
-    try {
-        await Promise.all([
-            loadDashboard(),
-            loadRouters(),
-            loadAlerts(),
             loadConfig(),
             loadWhitelist(),
             loadFirewallStatus(),
@@ -195,9 +187,6 @@ refreshAllBtn.addEventListener('click', async () => {
             loadInterfaces(),
             loadFlows(),
         ]);
-        showToast('Dados atualizados.', 'success');
-    } catch (error) {
-        showToast(`Nem todos os dados foram atualizados: ${error.message}`, 'danger');
     }
 });
 
@@ -328,11 +317,6 @@ async function loadDashboardStats() {
 async function loadRouters() {
     try {
         const routers = await apiFetch('/api/routers');
-        if (!Array.isArray(routers) || routers.length === 0) {
-            routersTable.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">Nenhum roteador cadastrado.</td></tr>';
-            return;
-        }
-        routersTable.innerHTML = routers
             .map((router) => {
                 const snmp = router.snmp || {};
                 return `
@@ -352,13 +336,7 @@ async function loadRouters() {
                 </tr>`;
             })
             .join('');
-    } catch (error) {
-        showToast(`Erro ao carregar roteadores: ${error.message}`, 'danger');
-    }
-}
-
-document.getElementById('reload-routers').addEventListener('click', loadRouters);
-
+      
 routersTable.addEventListener('click', async (event) => {
     const button = event.target.closest('button[data-action]');
     if (!button) return;
@@ -442,11 +420,6 @@ snmpTestForm.addEventListener('submit', async (event) => {
 async function loadAlerts() {
     try {
         const alerts = await apiFetch('/api/alerts');
-        if (!Array.isArray(alerts) || alerts.length === 0) {
-            alertsTable.innerHTML = '<tr><td colspan="4" class="text-center text-secondary">Nenhuma regra configurada.</td></tr>';
-            return;
-        }
-        alertsTable.innerHTML = alerts
             .map((rule) => `
                 <tr>
                     <td>${rule.name}</td>
@@ -462,12 +435,6 @@ async function loadAlerts() {
                     </td>
                 </tr>`)
             .join('');
-    } catch (error) {
-        showToast(`Falha ao carregar alertas: ${error.message}`, 'danger');
-    }
-}
-
-document.getElementById('reload-alerts').addEventListener('click', loadAlerts);
 
 alertsTable.addEventListener('click', async (event) => {
     const button = event.target.closest('button[data-action]');
@@ -475,17 +442,6 @@ alertsTable.addEventListener('click', async (event) => {
     const action = button.dataset.action;
     const name = decodeURIComponent(button.dataset.name || '');
     if (!name) return;
-
-    if (action === 'delete-alert') {
-        if (!confirm(`Deseja remover a regra ${name}?`)) return;
-        try {
-            await apiFetch(`/api/alerts/${encodeURIComponent(name)}`, { method: 'DELETE' });
-            showToast('Regra removida.', 'success');
-            await loadAlerts();
-        } catch (error) {
-            showToast(`Falha ao remover: ${error.message}`, 'danger');
-        }
-    }
 
     if (action === 'edit-alert') {
         try {
@@ -708,8 +664,6 @@ flowLimitInput.addEventListener('change', () => {
 
 const tabLoaders = new Map([
     ['#tab-dashboard', loadDashboard],
-    ['#tab-routers', async () => { await loadRouters(); await loadBGPPeers(); }],
-    ['#tab-alerts', loadAlerts],
     ['#tab-config', loadConfig],
     ['#tab-whitelist', async () => { await loadWhitelist(); await loadFirewallStatus(); }],
     ['#tab-management', async () => { await loadGrafana(); await loadBGPPeers(); }],
@@ -719,9 +673,6 @@ const tabLoaders = new Map([
 document.getElementById('app-tabs').addEventListener('shown.bs.tab', async (event) => {
     const target = event.target.getAttribute('data-target');
     const loader = tabLoaders.get(target);
-    if (loader) {
-        await loader();
-    }
 });
 
 checkSession();
