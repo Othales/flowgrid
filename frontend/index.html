@@ -30,43 +30,6 @@
             max-height: 320px;
             overflow: auto;
         }
-        .alerts-flowchart {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            justify-content: center;
-        }
-        .alert-flow-step {
-            flex: 1 1 200px;
-            min-width: 180px;
-            background-color: rgba(255,255,255,0.04);
-            border-radius: 0.75rem;
-            padding: 1rem;
-            text-align: center;
-        }
-        .alert-flow-step i {
-            font-size: 1.75rem;
-            color: var(--bs-primary);
-            margin-bottom: 0.5rem;
-        }
-        .alert-flow-metric {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-        .alert-flow-detail {
-            color: var(--bs-secondary);
-        }
-        .alert-flow-arrow {
-            align-self: center;
-            color: var(--bs-secondary);
-            font-size: 1.5rem;
-        }
-        @media (max-width: 991.98px) {
-            .alert-flow-arrow {
-                display: none;
-            }
-        }
         pre {
             background-color: rgba(255,255,255,0.05);
             border-radius: 0.75rem;
@@ -213,16 +176,6 @@
                                     <div class="col-12">
                                         <div class="card">
                                             <div class="card-body">
-                                                <h2 class="h5 mb-3">Visão geral SNMP</h2>
-                                                <div class="row g-3" id="router-summary">
-                                                    <div class="col-12 text-secondary">Carregue os dados para visualizar a saúde dos roteadores.</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="card">
-                                            <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                                     <h2 class="h5 mb-0">Roteadores configurados</h2>
                                                     <button class="btn btn-outline-primary btn-sm" id="reload-routers"><i class="fa-solid fa-rotate"></i> Atualizar lista</button>
@@ -358,18 +311,6 @@
                                                         <button class="btn btn-primary" type="submit">Criar Regra</button>
                                                     </div>
                                                 </form>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row g-3 mt-1">
-                                    <div class="col-12">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <h2 class="h5 mb-3">Fluxograma do pipeline de alertas</h2>
-                                                <div class="alerts-flowchart" id="alerts-flowchart">
-                                                    <div class="text-secondary">Aguardando atualização dos dados para montar o fluxo.</div>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>

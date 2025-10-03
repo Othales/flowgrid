@@ -29,13 +29,6 @@ const systemCards = document.getElementById('system-cards');
 const statsOverview = document.getElementById('stats-overview');
 const topSourcesTable = document.querySelector('#top-sources-table tbody');
 const topAppsTable = document.querySelector('#top-apps-table tbody');
-const routerSummary = document.getElementById('router-summary');
-const alertsFlowchart = document.getElementById('alerts-flowchart');
-
-let sessionCache = null;
-let vendorsCache = [];
-let routersCache = [];
-let alertsCache = [];
 
 function showToast(message, variant = 'info') {
     const wrapper = document.createElement('div');
@@ -186,10 +179,6 @@ logoutBtn.addEventListener('click', async () => {
 });
 
 refreshAllBtn.addEventListener('click', async () => {
-    let hadError = false;
-    try {
-        await Promise.all([
-            loadDashboard(),
             loadConfig(),
             loadWhitelist(),
             loadFirewallStatus(),
@@ -198,26 +187,6 @@ refreshAllBtn.addEventListener('click', async () => {
             loadInterfaces(),
             loadFlows(),
         ]);
-
-        const routersOk = await loadRouters();
-        if (routersOk === false) hadError = true;
-
-        const summaryOk = await loadRouterSummary();
-        if (summaryOk === false) hadError = true;
-
-        const alertsOk = await loadAlerts();
-        if (alertsOk === false) hadError = true;
-
-        const insightsOk = await loadAlertInsights();
-        if (insightsOk === false) hadError = true;
-
-        if (hadError) {
-            showToast('Nem todos os dados foram atualizados, verifique os avisos exibidos.', 'warning');
-        } else {
-            showToast('Dados atualizados.', 'success');
-        }
-    } catch (error) {
-        showToast(`Erro ao atualizar: ${error.message}`, 'danger');
     }
 });
 
@@ -348,12 +317,6 @@ async function loadDashboardStats() {
 async function loadRouters() {
     try {
         const routers = await apiFetch('/api/routers');
-        routersCache = Array.isArray(routers) ? routers : [];
-        if (routersCache.length === 0) {
-            routersTable.innerHTML = '<tr><td colspan="5" class="text-center text-secondary">Nenhum roteador cadastrado.</td></tr>';
-            return true;
-        }
-        routersTable.innerHTML = routersCache
             .map((router) => {
                 const snmp = router.snmp || {};
                 return `
@@ -373,109 +336,7 @@ async function loadRouters() {
                 </tr>`;
             })
             .join('');
-        return true;
-    } catch (error) {
-        routersCache = [];
-        showToast(`Erro ao carregar roteadores: ${error.message}`, 'danger');
-        return false;
-    }
-}
-
-document.getElementById('reload-routers').addEventListener('click', async () => {
-    await loadRouters();
-    await loadRouterSummary();
-});
-
-async function loadRouterSummary() {
-    if (!routerSummary) return true;
-    try {
-        const [stats, dashboard] = await Promise.all([
-            apiFetch('/stats'),
-            apiFetch('/api/dashboard/stats?hours=24'),
-        ]);
-        renderRouterSummary(stats, dashboard);
-        return true;
-    } catch (error) {
-        routerSummary.innerHTML = '<div class="col-12 text-danger">Não foi possível atualizar a visão geral SNMP.</div>';
-        showToast(`Erro ao atualizar visão geral: ${error.message}`, 'danger');
-        return false;
-    }
-}
-
-function renderRouterSummary(stats = {}, dashboard = {}) {
-    if (!routerSummary) return;
-    const totalRouters = routersCache.length;
-    const topSources = Array.isArray(dashboard.top_sources) ? dashboard.top_sources : [];
-    const activeSet = new Set(topSources.map((item) => item.source_name));
-    const activeCount = routersCache.filter((router) => activeSet.has(router.name)).length;
-    const inactiveCount = Math.max(totalRouters - activeCount, 0);
-    const lastActiveISO = topSources.reduce((latest, item) => {
-        if (!item.last_active) return latest;
-        if (!latest) return item.last_active;
-        return new Date(item.last_active) > new Date(latest) ? item.last_active : latest;
-    }, null);
-    const vendorCounts = routersCache.reduce((acc, router) => {
-        const key = router.vendor || 'Desconhecido';
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
-    }, {});
-    const vendorEntries = Object.entries(vendorCounts);
-    const topVendor = vendorEntries.sort((a, b) => b[1] - a[1])[0];
-
-    const cards = [
-        {
-            icon: 'server',
-            label: 'Fontes cadastradas',
-            value: formatNumber(totalRouters),
-            detail: totalRouters
-                ? `${formatNumber(activeCount)} ativos • ${formatNumber(inactiveCount)} sem tráfego recente`
-                : 'Cadastre um roteador para iniciar o monitoramento',
-        },
-        {
-            icon: 'clock-rotate-left',
-            label: 'Última atividade',
-            value: lastActiveISO ? formatDate(lastActiveISO) : '-',
-            detail: activeCount
-                ? `Referência: ${topSources[0]?.source_name || 'fonte desconhecida'}`
-                : 'Sem dados de fluxo nas últimas 24h',
-        },
-        {
-            icon: 'network-wired',
-            label: 'Interfaces SNMP',
-            value: formatNumber(stats.interface_count || 0),
-            detail: (stats.snmp_errors || 0)
-                ? `${formatNumber(stats.snmp_errors)} erros SNMP reportados`
-                : 'Nenhum erro SNMP registrado',
-        },
-        {
-            icon: 'chart-pie',
-            label: 'Diversidade de vendors',
-            value: vendorEntries.length ? `${formatNumber(vendorEntries.length)} vendors` : 'Nenhum vendor',
-            detail: topVendor && totalRouters
-                ? `Topo: ${topVendor[0]} (${formatPercent((topVendor[1] / totalRouters) * 100)})`
-                : 'Aguardando cadastro de fontes',
-        },
-    ];
-
-    routerSummary.innerHTML = cards
-        .map(
-            (card) => `
-            <div class="col-md-6 col-xl-3">
-                <div class="card h-100 bg-body-tertiary">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-secondary">${card.label}</span>
-                            <i class="fa-solid fa-${card.icon} text-primary"></i>
-                        </div>
-                        <p class="fs-4 fw-semibold mt-2 mb-1">${card.value}</p>
-                        <p class="text-secondary mb-0">${card.detail}</p>
-                    </div>
-                </div>
-            </div>`
-        )
-        .join('');
-}
-
+      
 routersTable.addEventListener('click', async (event) => {
     const button = event.target.closest('button[data-action]');
     if (!button) return;
@@ -489,7 +350,6 @@ routersTable.addEventListener('click', async (event) => {
             await apiFetch(`/api/routers/${encodeURIComponent(name)}`, { method: 'DELETE' });
             showToast('Roteador removido.', 'success');
             await loadRouters();
-            await loadRouterSummary();
         } catch (error) {
             showToast(`Falha ao remover: ${error.message}`, 'danger');
         }
@@ -504,7 +364,6 @@ routersTable.addEventListener('click', async (event) => {
             await apiFetch(`/api/routers/${encodeURIComponent(name)}`, { method: 'PUT', json: payload });
             showToast('Roteador atualizado.', 'success');
             await loadRouters();
-            await loadRouterSummary();
         } catch (error) {
             showToast(`Falha ao atualizar: ${error.message}`, 'danger');
         }
@@ -534,7 +393,6 @@ routerForm.addEventListener('submit', async (event) => {
         document.getElementById('router-port').value = 161;
         showToast('Roteador cadastrado.', 'success');
         await loadRouters();
-        await loadRouterSummary();
     } catch (error) {
         showToast(`Falha ao cadastrar: ${error.message}`, 'danger');
     }
@@ -562,12 +420,6 @@ snmpTestForm.addEventListener('submit', async (event) => {
 async function loadAlerts() {
     try {
         const alerts = await apiFetch('/api/alerts');
-        alertsCache = Array.isArray(alerts) ? alerts : [];
-        if (alertsCache.length === 0) {
-            alertsTable.innerHTML = '<tr><td colspan="4" class="text-center text-secondary">Nenhuma regra configurada.</td></tr>';
-            return true;
-        }
-        alertsTable.innerHTML = alertsCache
             .map((rule) => `
                 <tr>
                     <td>${rule.name}</td>
@@ -583,91 +435,6 @@ async function loadAlerts() {
                     </td>
                 </tr>`)
             .join('');
-        return true;
-    } catch (error) {
-        alertsCache = [];
-        showToast(`Falha ao carregar alertas: ${error.message}`, 'danger');
-        return false;
-    }
-}
-
-document.getElementById('reload-alerts').addEventListener('click', async () => {
-    await loadAlerts();
-    await loadAlertInsights();
-});
-
-async function loadAlertInsights() {
-    if (!alertsFlowchart) return true;
-    try {
-        const [stats, dashboard] = await Promise.all([
-            apiFetch('/stats'),
-            apiFetch('/api/dashboard/stats?hours=24'),
-        ]);
-        renderAlertFlowchart(stats, dashboard);
-        return true;
-    } catch (error) {
-        alertsFlowchart.innerHTML = '<div class="text-danger">Não foi possível atualizar o fluxograma.</div>';
-        showToast(`Erro ao atualizar fluxograma: ${error.message}`, 'danger');
-        return false;
-    }
-}
-
-function renderAlertFlowchart(stats = {}, dashboard = {}) {
-    if (!alertsFlowchart) return;
-    const totalFlows = dashboard.total_flows || 0;
-    const totalBytes = dashboard.total_bytes || 0;
-    const interfaceCount = stats.interface_count || 0;
-    const snmpErrors = stats.snmp_errors || 0;
-    const activeRules = alertsCache.filter((rule) => rule.enabled).length;
-    const queueLength = stats.queue_length || 0;
-    const totalRules = alertsCache.length;
-    const alertsLast24h = dashboard.alerts_last_24h || 0;
-    const threatsBlocked = dashboard.threats_blocked || 0;
-
-    const steps = [
-        {
-            icon: 'satellite-dish',
-            title: 'Coleta de fluxos',
-            metric: formatNumber(totalFlows),
-            detail: totalBytes ? `${formatBytes(totalBytes)} nas últimas 24h` : 'Sem tráfego recente registrado',
-        },
-        {
-            icon: 'network-wired',
-            title: 'Enriquecimento SNMP',
-            metric: `${formatNumber(interfaceCount)} interfaces`,
-            detail: snmpErrors ? `${formatNumber(snmpErrors)} erros SNMP acumulados` : 'Nenhum erro SNMP reportado',
-        },
-        {
-            icon: 'bell',
-            title: 'Motor de regras',
-            metric: `${formatNumber(activeRules)} ativas`,
-            detail: `Fila: ${formatNumber(queueLength)} • Total de regras: ${formatNumber(totalRules)}`,
-        },
-        {
-            icon: 'shield-halved',
-            title: 'Ações e bloqueios',
-            metric: `${formatNumber(alertsLast24h)} alertas`,
-            detail: threatsBlocked ? `Bloqueios aplicados: ${formatNumber(threatsBlocked)}` : 'Nenhum bloqueio recente',
-        },
-    ];
-
-    const pieces = [];
-    steps.forEach((step, index) => {
-        pieces.push(`
-            <div class="alert-flow-step">
-                <i class="fa-solid fa-${step.icon}"></i>
-                <div class="text-uppercase small text-secondary mb-1">${step.title}</div>
-                <div class="alert-flow-metric">${step.metric}</div>
-                <div class="alert-flow-detail">${step.detail}</div>
-            </div>
-        `);
-        if (index < steps.length - 1) {
-            pieces.push('<div class="alert-flow-arrow d-none d-lg-flex"><i class="fa-solid fa-arrow-right-long"></i></div>');
-        }
-    });
-
-    alertsFlowchart.innerHTML = pieces.join('');
-}
 
 alertsTable.addEventListener('click', async (event) => {
     const button = event.target.closest('button[data-action]');
@@ -675,18 +442,6 @@ alertsTable.addEventListener('click', async (event) => {
     const action = button.dataset.action;
     const name = decodeURIComponent(button.dataset.name || '');
     if (!name) return;
-
-        if (action === 'delete-alert') {
-            if (!confirm(`Deseja remover a regra ${name}?`)) return;
-            try {
-                await apiFetch(`/api/alerts/${encodeURIComponent(name)}`, { method: 'DELETE' });
-                showToast('Regra removida.', 'success');
-                await loadAlerts();
-                await loadAlertInsights();
-            } catch (error) {
-                showToast(`Falha ao remover: ${error.message}`, 'danger');
-            }
-        }
 
     if (action === 'edit-alert') {
         try {
@@ -702,7 +457,6 @@ alertsTable.addEventListener('click', async (event) => {
             await apiFetch(`/api/alerts/${encodeURIComponent(name)}`, { method: 'PUT', json: payload });
             showToast('Regra atualizada.', 'success');
             await loadAlerts();
-            await loadAlertInsights();
         } catch (error) {
             showToast(`Falha ao atualizar: ${error.message}`, 'danger');
         }
@@ -727,7 +481,6 @@ alertForm.addEventListener('submit', async (event) => {
         document.getElementById('alert-enabled').checked = true;
         showToast('Regra criada com sucesso.', 'success');
         await loadAlerts();
-        await loadAlertInsights();
     } catch (error) {
         showToast(`Falha ao criar regra: ${error.message}`, 'danger');
     }
@@ -911,15 +664,6 @@ flowLimitInput.addEventListener('change', () => {
 
 const tabLoaders = new Map([
     ['#tab-dashboard', loadDashboard],
-    ['#tab-routers', async () => {
-        await loadRouters();
-        await loadRouterSummary();
-        await loadBGPPeers();
-    }],
-    ['#tab-alerts', async () => {
-        await loadAlerts();
-        await loadAlertInsights();
-    }],
     ['#tab-config', loadConfig],
     ['#tab-whitelist', async () => { await loadWhitelist(); await loadFirewallStatus(); }],
     ['#tab-management', async () => { await loadGrafana(); await loadBGPPeers(); }],
@@ -929,13 +673,6 @@ const tabLoaders = new Map([
 document.getElementById('app-tabs').addEventListener('shown.bs.tab', async (event) => {
     const target = event.target.getAttribute('data-target');
     const loader = tabLoaders.get(target);
-    if (loader) {
-        try {
-            await loader();
-        } catch (error) {
-            showToast(`Falha ao atualizar aba: ${error.message}`, 'danger');
-        }
-    }
 });
 
 checkSession();
