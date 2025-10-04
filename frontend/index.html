@@ -223,9 +223,12 @@
                                     <div class="col-12">
                                         <div class="card">
                                             <div class="card-body">
-                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                                     <h2 class="h5 mb-0">Roteadores configurados</h2>
-                                                    <button class="btn btn-outline-primary btn-sm" id="reload-routers"><i class="fa-solid fa-rotate"></i> Atualizar lista</button>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-outline-primary btn-sm" id="reload-routers"><i class="fa-solid fa-rotate"></i> Atualizar lista</button>
+                                                        <button class="btn btn-primary btn-sm" id="open-router-modal"><i class="fa-solid fa-plus"></i> Novo roteador</button>
+                                                    </div>
                                                 </div>
                                                 <div class="table-responsive card-table">
                                                     <table class="table table-dark table-striped align-middle" id="routers-table">
@@ -247,46 +250,60 @@
                                     <div class="col-12">
                                         <div class="card">
                                             <div class="card-body">
-                                                <h2 class="h5">Adicionar Roteador</h2>
-                                                <form id="router-form" class="row g-3">
-                                                    <div class="col-md-4">
-                                                        <label class="form-label" for="router-name">Nome</label>
-                                                        <input class="form-control" id="router-name" required />
+                                                <h2 class="h5">Teste SNMP</h2>
+                                                <form id="snmp-test-form" class="row g-3">
+                                                    <div class="col-md-3">
+                                                        <label class="form-label" for="snmp-test-ip">IP</label>
+                                                        <input class="form-control" id="snmp-test-ip" placeholder="192.0.2.1" required />
                                                     </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label" for="router-vendor">Vendor</label>
-                                                        <select class="form-select" id="router-vendor"></select>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label" for="snmp-test-port">Porta</label>
+                                                        <input class="form-control" id="snmp-test-port" type="number" value="161" min="1" max="65535" />
                                                     </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label" for="router-ip">IP SNMP</label>
-                                                        <input class="form-control" id="router-ip" placeholder="192.0.2.1" required />
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label" for="router-community">Community</label>
-                                                        <input class="form-control" id="router-community" value="public" />
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label" for="router-port">Porta</label>
-                                                        <input class="form-control" id="router-port" type="number" value="161" min="1" max="65535" />
-                                                    </div>
-                                                    <div class="col-md-4">
-                                                        <label class="form-label" for="router-version">Versão</label>
-                                                        <select class="form-select" id="router-version">
+                                                    <div class="col-md-2">
+                                                        <label class="form-label" for="snmp-test-version">Versão</label>
+                                                        <select class="form-select" id="snmp-test-version">
                                                             <option value="2c">SNMP v2c</option>
                                                             <option value="3">SNMP v3</option>
                                                         </select>
                                                     </div>
-                                                    <div class="col-12 text-end">
-                                                        <button class="btn btn-primary" type="submit">Adicionar</button>
+                                                    <div class="col-md-2">
+                                                        <label class="form-label" for="snmp-test-community">Community</label>
+                                                        <input class="form-control" id="snmp-test-community" value="public" />
                                                     </div>
-                                                </form>
-                                                <hr />
-                                                <h3 class="h6">Teste SNMP</h3>
-                                                <form id="snmp-test-form" class="row g-3">
-                                                    <div class="col-md-4"><input class="form-control" id="snmp-test-ip" placeholder="IP" required /></div>
-                                                    <div class="col-md-3"><input class="form-control" id="snmp-test-community" placeholder="Community" value="public" /></div>
-                                                    <div class="col-md-2"><input class="form-control" id="snmp-test-port" type="number" value="161" min="1" max="65535" /></div>
-                                                    <div class="col-md-3 text-end"><button class="btn btn-outline-light" type="submit">Executar</button></div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label" for="snmp-test-user">Usuário (v3)</label>
+                                                        <input class="form-control" id="snmp-test-user" placeholder="snmpuser" />
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label" for="snmp-test-auth">Autenticação (v3)</label>
+                                                        <div class="d-flex gap-2">
+                                                            <select class="form-select" id="snmp-test-auth">
+                                                                <option value="">Nenhum</option>
+                                                                <option value="MD5">MD5</option>
+                                                                <option value="SHA">SHA</option>
+                                                                <option value="SHA256">SHA-256</option>
+                                                                <option value="SHA512">SHA-512</option>
+                                                            </select>
+                                                            <input class="form-control" id="snmp-test-authpass" placeholder="Senha" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label" for="snmp-test-priv">Privacidade (v3)</label>
+                                                        <div class="d-flex gap-2">
+                                                            <select class="form-select" id="snmp-test-priv">
+                                                                <option value="">Nenhum</option>
+                                                                <option value="DES">DES</option>
+                                                                <option value="AES">AES</option>
+                                                                <option value="AES192">AES-192</option>
+                                                                <option value="AES256">AES-256</option>
+                                                            </select>
+                                                            <input class="form-control" id="snmp-test-privpass" placeholder="Senha" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12 text-end">
+                                                        <button class="btn btn-outline-light" type="submit">Executar teste</button>
+                                                    </div>
                                                 </form>
                                                 <div class="form-text" id="snmp-test-result"></div>
                                             </div>
@@ -299,9 +316,12 @@
                                     <div class="col-lg-7">
                                         <div class="card h-100">
                                             <div class="card-body">
-                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                                     <h2 class="h5 mb-0">Regras de alerta</h2>
-                                                    <button class="btn btn-outline-primary btn-sm" id="reload-alerts"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-outline-primary btn-sm" id="reload-alerts"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+                                                        <button class="btn btn-primary btn-sm" id="open-alert-modal"><i class="fa-solid fa-wand-magic-sparkles"></i> Novo fluxo</button>
+                                                    </div>
                                                 </div>
                                                 <div class="card-table">
                                                     <table class="table table-dark table-striped" id="alerts-table">
@@ -321,43 +341,15 @@
                                     </div>
                                     <div class="col-lg-5">
                                         <div class="card h-100">
-                                            <div class="card-body">
-                                                <h2 class="h5">Nova Regra</h2>
-                                                <form id="alert-form" class="row g-3">
-                                                    <div class="col-12">
-                                                        <label class="form-label" for="alert-name">Nome</label>
-                                                        <input class="form-control" id="alert-name" required />
+                                            <div class="card-body d-flex flex-column">
+                                                <h2 class="h5">Construa fluxos sem código</h2>
+                                                <p class="text-secondary mb-4">Monte gatilhos combinando filtros, condições e ações com o estúdio visual. Clique em <strong>Novo fluxo</strong> para iniciar ou edite uma regra existente na tabela ao lado.</p>
+                                                <div class="mt-auto">
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-primary" id="open-alert-modal-secondary"><i class="fa-solid fa-wand-magic-sparkles"></i> Abrir estúdio</button>
+                                                        <button class="btn btn-outline-light" id="open-alert-docs" type="button"><i class="fa-solid fa-book"></i> Exemplos de filtros</button>
                                                     </div>
-                                                    <div class="col-12">
-                                                        <label class="form-label" for="alert-filter">Filtro</label>
-                                                        <textarea class="form-control" id="alert-filter" rows="2" placeholder="DstPort=53"></textarea>
-                                                    </div>
-                                                    <div class="col-12">
-                                                        <label class="form-label" for="alert-condition">Condição</label>
-                                                        <input class="form-control" id="alert-condition" placeholder="bytes > 1000000" />
-                                                    </div>
-                                                    <div class="col-12">
-                                                        <label class="form-label" for="alert-window">Janela (segundos)</label>
-                                                        <input class="form-control" id="alert-window" type="number" value="60" min="1" />
-                                                    </div>
-                                                    <div class="col-12">
-                                                        <label class="form-label" for="alert-actions">Ações (separadas por vírgula)</label>
-                                                        <input class="form-control" id="alert-actions" placeholder="notify,block" />
-                                                    </div>
-                                                    <div class="col-12">
-                                                        <label class="form-label" for="alert-comment">Comentário</label>
-                                                        <textarea class="form-control" id="alert-comment" rows="2"></textarea>
-                                                    </div>
-                                                    <div class="col-12">
-                                                        <div class="form-check form-switch">
-                                                            <input class="form-check-input" type="checkbox" id="alert-enabled" checked />
-                                                            <label class="form-check-label" for="alert-enabled">Ativo</label>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-12 text-end">
-                                                        <button class="btn btn-primary" type="submit">Criar Regra</button>
-                                                    </div>
-                                                </form>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -381,23 +373,238 @@
                                         <div class="card">
                                             <div class="card-body">
                                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                                    <h2 class="h5 mb-0">Configuração atual</h2>
-                                                    <button class="btn btn-outline-primary btn-sm" id="reload-config"><i class="fa-solid fa-rotate"></i> Recarregar</button>
+                                                    <h2 class="h5 mb-0">Panorama da configuração</h2>
+                                                    <button class="btn btn-outline-primary btn-sm" id="reload-config"><i class="fa-solid fa-rotate"></i> Atualizar</button>
                                                 </div>
-                                                <pre id="config-view"></pre>
+                                                <div class="row g-3" id="config-summary">
+                                                    <div class="col-12 text-secondary">Carregue a configuração para visualizar os parâmetros atuais.</div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="col-12">
                                         <div class="card">
                                             <div class="card-body">
-                                                <h2 class="h5">Atualizar configuração</h2>
-                                                <p class="text-secondary">Envie apenas os campos que deseja alterar (JSON válido).</p>
-                                                <textarea class="form-control" id="config-editor" rows="6" placeholder='{"netflow_port": 2055}'></textarea>
-                                                <div class="text-end mt-3">
-                                                    <button class="btn btn-primary" id="save-config">Aplicar</button>
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h2 class="h5 mb-0">Editar parâmetros</h2>
+                                                    <span class="text-secondary small">Os campos sensíveis aparecem vazios. Preencha apenas o que deseja alterar.</span>
                                                 </div>
-                                                <div class="form-text" id="config-feedback"></div>
+                                                <form id="config-form" class="row g-4">
+                                                    <div class="col-xl-6">
+                                                        <div class="border rounded-3 p-3 h-100">
+                                                            <h3 class="h6 mb-3"><i class="fa-solid fa-diagram-project me-2 text-primary"></i> Coleta e processamento</h3>
+                                                            <div class="row g-3">
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label" for="config-netflow">Porta NetFlow</label>
+                                                                    <input class="form-control" type="number" id="config-netflow" min="1" max="65535" />
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label" for="config-sflow">Porta sFlow</label>
+                                                                    <input class="form-control" type="number" id="config-sflow" min="1" max="65535" />
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <label class="form-label" for="config-http">Porta API</label>
+                                                                    <input class="form-control" type="number" id="config-http" min="1" max="65535" />
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-update-interval">Intervalo de atualização (min)</label>
+                                                                    <input class="form-control" type="number" id="config-update-interval" min="1" />
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-clean-time">Limpeza ClickHouse (min)</label>
+                                                                    <input class="form-control" type="number" id="config-clean-time" min="0" />
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-data-path">Diretório de dados</label>
+                                                                    <input class="form-control" id="config-data-path" placeholder="/var/lib/flowgrid" />
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-max-disk">Limite de disco (GB)</label>
+                                                                    <input class="form-control" type="number" id="config-max-disk" min="1" />
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <label class="form-label" for="config-password">Senha do painel</label>
+                                                                    <input class="form-control" type="password" id="config-password" placeholder="Deixe em branco para manter" autocomplete="new-password" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-xl-6">
+                                                        <div class="border rounded-3 p-3 h-100">
+                                                            <h3 class="h6 mb-3"><i class="fa-solid fa-route me-2 text-primary"></i> Rede e contexto</h3>
+                                                            <div class="row g-3">
+                                                                <div class="col-12">
+                                                                    <label class="form-label" for="config-api-network">Redes autorizadas na API</label>
+                                                                    <textarea class="form-control" id="config-api-network" rows="2" placeholder="10.0.0.0/24"></textarea>
+                                                                    <div class="form-text">Uma rede por linha.</div>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <label class="form-label" for="config-internal-blocks">Blocos internos</label>
+                                                                    <textarea class="form-control" id="config-internal-blocks" rows="2"></textarea>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-internal-asns">ASNs internos</label>
+                                                                    <textarea class="form-control" id="config-internal-asns" rows="2" placeholder="64512"></textarea>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-favorite-asns">ASNs favoritos</label>
+                                                                    <textarea class="form-control" id="config-favorite-asns" rows="2"></textarea>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-favorite-ips">IPs favoritos</label>
+                                                                    <textarea class="form-control" id="config-favorite-ips" rows="2"></textarea>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-ignored-ips">IPs ignorados</label>
+                                                                    <textarea class="form-control" id="config-ignored-ips" rows="2"></textarea>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <label class="form-label" for="config-favorite-services">Serviços favoritos</label>
+                                                                    <textarea class="form-control" id="config-favorite-services" rows="2" placeholder="dns,tls"></textarea>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-ignored-asns">ASNs ignorados</label>
+                                                                    <textarea class="form-control" id="config-ignored-asns" rows="2"></textarea>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-xl-6">
+                                                        <div class="border rounded-3 p-3 h-100">
+                                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                                <h3 class="h6 mb-0"><i class="fa-solid fa-bell me-2 text-primary"></i> Notificações</h3>
+                                                                <div class="form-check form-switch">
+                                                                    <input class="form-check-input" type="checkbox" id="config-notification-apply" />
+                                                                    <label class="form-check-label" for="config-notification-apply">Aplicar alterações</label>
+                                                                </div>
+                                                            </div>
+                                                            <div class="row g-3">
+                                                                <div class="col-12">
+                                                                    <div class="border rounded-3 p-3">
+                                                                        <h4 class="h6"><i class="fa-brands fa-telegram me-2"></i> Telegram</h4>
+                                                                        <div class="form-check form-switch mb-2">
+                                                                            <input class="form-check-input" type="checkbox" id="config-telegram-enabled" />
+                                                                            <label class="form-check-label" for="config-telegram-enabled">Ativar notificações</label>
+                                                                        </div>
+                                                                        <div class="row g-2">
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label" for="config-telegram-bot">Bot token</label>
+                                                                                <input class="form-control" id="config-telegram-bot" placeholder="Informe para atualizar" />
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label" for="config-telegram-proxy">Proxy</label>
+                                                                                <input class="form-control" id="config-telegram-proxy" />
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label" for="config-telegram-chatids">Chat IDs</label>
+                                                                                <textarea class="form-control" id="config-telegram-chatids" rows="2" placeholder="123456"></textarea>
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label" for="config-telegram-replyids">Reply IDs</label>
+                                                                                <textarea class="form-control" id="config-telegram-replyids" rows="2"></textarea>
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <div class="form-check">
+                                                                                    <input class="form-check-input" type="checkbox" id="config-telegram-alerts" />
+                                                                                    <label class="form-check-label" for="config-telegram-alerts">Alertas</label>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <div class="form-check">
+                                                                                    <input class="form-check-input" type="checkbox" id="config-telegram-system" />
+                                                                                    <label class="form-check-label" for="config-telegram-system">Eventos de sistema</label>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <div class="border rounded-3 p-3">
+                                                                        <h4 class="h6"><i class="fa-solid fa-envelope me-2"></i> E-mail</h4>
+                                                                        <div class="form-check form-switch mb-2">
+                                                                            <input class="form-check-input" type="checkbox" id="config-email-enabled" />
+                                                                            <label class="form-check-label" for="config-email-enabled">Ativar notificações</label>
+                                                                        </div>
+                                                                        <div class="row g-2">
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label" for="config-email-host">Servidor SMTP</label>
+                                                                                <input class="form-control" id="config-email-host" placeholder="smtp.example.com" />
+                                                                            </div>
+                                                                            <div class="col-md-3">
+                                                                                <label class="form-label" for="config-email-port">Porta</label>
+                                                                                <input class="form-control" type="number" id="config-email-port" min="1" max="65535" />
+                                                                            </div>
+                                                                            <div class="col-md-3">
+                                                                                <label class="form-label" for="config-email-from">Remetente</label>
+                                                                                <input class="form-control" id="config-email-from" placeholder="flowgrid@example.com" />
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label" for="config-email-username">Usuário</label>
+                                                                                <input class="form-control" id="config-email-username" />
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label" for="config-email-password">Senha</label>
+                                                                                <input class="form-control" id="config-email-password" type="password" placeholder="Informe para atualizar" autocomplete="new-password" />
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label" for="config-email-to">Destinatários</label>
+                                                                                <textarea class="form-control" id="config-email-to" rows="2"></textarea>
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <label class="form-label" for="config-email-replyto">Reply-To</label>
+                                                                                <textarea class="form-control" id="config-email-replyto" rows="2"></textarea>
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <div class="form-check">
+                                                                                    <input class="form-check-input" type="checkbox" id="config-email-tls" />
+                                                                                    <label class="form-check-label" for="config-email-tls">Usar TLS</label>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div class="col-md-6">
+                                                                                <div class="form-check">
+                                                                                    <input class="form-check-input" type="checkbox" id="config-email-starttls" />
+                                                                                    <label class="form-check-label" for="config-email-starttls">StartTLS</label>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-xl-6">
+                                                        <div class="border rounded-3 p-3 h-100">
+                                                            <h3 class="h6 mb-3"><i class="fa-solid fa-shield-halved me-2 text-primary"></i> Firewall & whitelist</h3>
+                                                            <div class="row g-3">
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-firewall-netflow">NetFlow permitido</label>
+                                                                    <textarea class="form-control" id="config-firewall-netflow" rows="2"></textarea>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-firewall-sflow">sFlow permitido</label>
+                                                                    <textarea class="form-control" id="config-firewall-sflow" rows="2"></textarea>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-firewall-api">API liberada</label>
+                                                                    <textarea class="form-control" id="config-firewall-api" rows="2"></textarea>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label" for="config-firewall-export">Interfaces exportadas</label>
+                                                                    <textarea class="form-control" id="config-firewall-export" rows="2"></textarea>
+                                                                </div>
+                                                                <div class="col-12">
+                                                                    <dl class="row mb-0 small" id="firewall-status"></dl>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12 text-end">
+                                                        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk me-2"></i>Aplicar alterações</button>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="form-text" id="config-form-feedback"></div>
+                                                    </div>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
@@ -405,31 +612,40 @@
                             </div>
                             <div class="tab-pane fade" id="tab-whitelist" role="tabpanel">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
+                                    <div class="col-lg-6">
                                         <div class="card h-100">
                                             <div class="card-body">
-                                                <h2 class="h5">Whitelist atual</h2>
-                                                <pre id="whitelist-view"></pre>
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <h2 class="h5 mb-0">Entradas atuais</h2>
+                                                    <button class="btn btn-outline-primary btn-sm" id="reload-whitelist"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+                                                </div>
+                                                <div id="whitelist-current" class="d-flex flex-wrap gap-2 text-break">
+                                                    <span class="text-secondary">Nenhuma entrada carregada.</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-lg-6">
                                         <div class="card h-100">
                                             <div class="card-body">
                                                 <h2 class="h5">Editar whitelist</h2>
-                                                <textarea class="form-control" id="whitelist-editor" rows="8" placeholder='{"ips": [], "cidrs": []}'></textarea>
-                                                <div class="text-end mt-3">
-                                                    <button class="btn btn-primary" id="save-whitelist">Salvar</button>
-                                                </div>
-                                                <div class="form-text" id="whitelist-feedback"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <h2 class="h5">Status do Firewall</h2>
-                                                <dl class="row" id="firewall-status"></dl>
+                                                <form id="whitelist-form" class="row g-3">
+                                                    <div class="col-12">
+                                                        <label class="form-label" for="whitelist-ips">IPs liberados</label>
+                                                        <textarea class="form-control" id="whitelist-ips" rows="4" placeholder="192.0.2.10"></textarea>
+                                                        <div class="form-text">Um IP por linha.</div>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label" for="whitelist-cidrs">CIDRs liberados</label>
+                                                        <textarea class="form-control" id="whitelist-cidrs" rows="4" placeholder="198.51.100.0/24"></textarea>
+                                                    </div>
+                                                    <div class="col-12 text-end">
+                                                        <button class="btn btn-primary" type="submit">Salvar whitelist</button>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <div class="form-text" id="whitelist-feedback"></div>
+                                                    </div>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
@@ -532,6 +748,213 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="router-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <form id="router-form">
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="router-modal-title">Novo roteador</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="router-name">Nome</label>
+                                <input class="form-control" id="router-name" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="router-vendor">Vendor</label>
+                                <select class="form-select" id="router-vendor"></select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label" for="router-ip">IP SNMP</label>
+                                <input class="form-control" id="router-ip" placeholder="192.0.2.1" required />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label" for="router-port">Porta</label>
+                                <input class="form-control" id="router-port" type="number" value="161" min="1" max="65535" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="router-version">Versão SNMP</label>
+                                <select class="form-select" id="router-version">
+                                    <option value="2c">SNMP v2c</option>
+                                    <option value="3">SNMP v3</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6" id="router-community-group">
+                                <label class="form-label" for="router-community">Community (v2c)</label>
+                                <input class="form-control" id="router-community" value="public" />
+                            </div>
+                            <div class="col-12" id="router-v3-fields">
+                                <div class="border rounded-3 p-3 bg-body-tertiary">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <label class="form-label" for="router-user">Usuário</label>
+                                            <input class="form-control" id="router-user" placeholder="snmpuser" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label" for="router-auth">Autenticação</label>
+                                            <select class="form-select" id="router-auth">
+                                                <option value="">Nenhum</option>
+                                                <option value="MD5">MD5</option>
+                                                <option value="SHA">SHA</option>
+                                                <option value="SHA256">SHA-256</option>
+                                                <option value="SHA512">SHA-512</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label" for="router-authpass">Senha de autenticação</label>
+                                            <input class="form-control" id="router-authpass" type="password" autocomplete="new-password" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label" for="router-priv">Privacidade</label>
+                                            <select class="form-select" id="router-priv">
+                                                <option value="">Nenhum</option>
+                                                <option value="DES">DES</option>
+                                                <option value="AES">AES</option>
+                                                <option value="AES192">AES-192</option>
+                                                <option value="AES256">AES-256</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label" for="router-privpass">Senha de privacidade</label>
+                                            <input class="form-control" id="router-privpass" type="password" autocomplete="new-password" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-text">Preencha os campos conforme a política SNMP v3 do dispositivo.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-text text-danger mt-3" id="router-form-feedback"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="router-form-submit"><i class="fa-solid fa-floppy-disk me-2"></i><span>Salvar roteador</span></button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="alert-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <form id="alert-form">
+                    <div class="modal-header">
+                        <h2 class="modal-title h5" id="alert-modal-title">Novo fluxo de alerta</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="visual-flow d-flex flex-column gap-3">
+                            <div class="border rounded-3 p-3">
+                                <div class="d-flex align-items-center mb-3 gap-2">
+                                    <div class="badge bg-primary rounded-pill p-2"><i class="fa-solid fa-tag"></i></div>
+                                    <div>
+                                        <h3 class="h6 mb-0">Identificação</h3>
+                                        <small class="text-secondary">Defina o nome e o estado da regra.</small>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label" for="alert-name">Nome</label>
+                                        <input class="form-control" id="alert-name" required />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Status</label>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="alert-enabled" checked />
+                                            <label class="form-check-label" for="alert-enabled">Regra ativa</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="border rounded-3 p-3">
+                                <div class="d-flex align-items-center mb-3 gap-2">
+                                    <div class="badge bg-success rounded-pill p-2"><i class="fa-solid fa-filter"></i></div>
+                                    <div>
+                                        <h3 class="h6 mb-0">Filtros</h3>
+                                        <small class="text-secondary">Combine campos sugeridos para montar o critério.</small>
+                                    </div>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="d-flex flex-wrap gap-2 mb-2" id="alert-filter-suggestions">
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="SrcAddr">SrcAddr</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="DstAddr">DstAddr</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="SrcPort">SrcPort</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="DstPort">DstPort</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="Proto">Proto</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="Bytes">Bytes</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="Packets">Packets</button>
+                                        </div>
+                                        <textarea class="form-control" id="alert-filter" rows="2" placeholder="DstPort=53"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="border rounded-3 p-3">
+                                <div class="d-flex align-items-center mb-3 gap-2">
+                                    <div class="badge bg-warning text-dark rounded-pill p-2"><i class="fa-solid fa-scale-balanced"></i></div>
+                                    <div>
+                                        <h3 class="h6 mb-0">Condição</h3>
+                                        <small class="text-secondary">Defina os limites para disparar o alerta.</small>
+                                    </div>
+                                </div>
+                                <div class="row g-3 align-items-end">
+                                    <div class="col-lg-6">
+                                        <label class="form-label" for="alert-condition">Expressão</label>
+                                        <input class="form-control" id="alert-condition" placeholder="bytes > 1000000" />
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <label class="form-label" for="alert-window">Janela (seg)</label>
+                                        <input class="form-control" id="alert-window" type="number" value="60" min="1" />
+                                    </div>
+                                    <div class="col-lg-3">
+                                        <label class="form-label" for="alert-comment">Comentário</label>
+                                        <input class="form-control" id="alert-comment" placeholder="Opcional" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="border rounded-3 p-3">
+                                <div class="d-flex align-items-center mb-3 gap-2">
+                                    <div class="badge bg-danger rounded-pill p-2"><i class="fa-solid fa-bolt"></i></div>
+                                    <div>
+                                        <h3 class="h6 mb-0">Ações</h3>
+                                        <small class="text-secondary">Escolha os blocos de reação ou adicione seus próprios.</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2 mb-3" id="alert-action-options">
+                                    <button type="button" class="btn btn-outline-light alert-action-toggle" data-value="log"><i class="fa-solid fa-file-lines me-1"></i>Log</button>
+                                    <button type="button" class="btn btn-outline-light alert-action-toggle" data-value="database"><i class="fa-solid fa-database me-1"></i>Database</button>
+                                    <button type="button" class="btn btn-outline-light alert-action-toggle" data-value="webhook"><i class="fa-solid fa-plug me-1"></i>Webhook</button>
+                                    <button type="button" class="btn btn-outline-light alert-action-toggle" data-value="notify"><i class="fa-solid fa-bell me-1"></i>Notify</button>
+                                    <button type="button" class="btn btn-outline-light alert-action-toggle" data-value="block"><i class="fa-solid fa-shield-halved me-1"></i>Block</button>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-lg-6">
+                                        <label class="form-label" for="alert-actions-custom">Ações personalizadas</label>
+                                        <input class="form-control" id="alert-actions-custom" placeholder="action-one,action-two" />
+                                        <div class="form-text">Separe por vírgula para adicionar blocos extras.</div>
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <label class="form-label">Fluxo resultante</label>
+                                        <div class="border rounded-3 p-3 bg-body-tertiary" id="alert-actions-preview">Nenhuma ação selecionada.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-text text-danger mt-3" id="alert-form-feedback"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-2"></i><span id="alert-submit-label">Criar fluxo</span></button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

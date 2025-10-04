@@ -8,18 +8,93 @@ const logoutBtn = document.getElementById('logout-btn');
 const refreshAllBtn = document.getElementById('refresh-all');
 const routerVendorSelect = document.getElementById('router-vendor');
 const routerForm = document.getElementById('router-form');
+const routerModalEl = document.getElementById('router-modal');
+const routerModal = routerModalEl ? new bootstrap.Modal(routerModalEl) : null;
+const routerModalTitle = document.getElementById('router-modal-title');
+const routerFormSubmit = document.getElementById('router-form-submit');
+const routerFormFeedback = document.getElementById('router-form-feedback');
+const routerVersionSelect = document.getElementById('router-version');
+const routerCommunityGroup = document.getElementById('router-community-group');
+const routerV3Fields = document.getElementById('router-v3-fields');
+const openRouterModalBtn = document.getElementById('open-router-modal');
 const snmpTestForm = document.getElementById('snmp-test-form');
 const snmpTestResult = document.getElementById('snmp-test-result');
 const routersTable = document.querySelector('#routers-table tbody');
 const alertsTable = document.querySelector('#alerts-table tbody');
 const alertForm = document.getElementById('alert-form');
-const configView = document.getElementById('config-view');
-const configEditor = document.getElementById('config-editor');
-const configFeedback = document.getElementById('config-feedback');
-const whitelistView = document.getElementById('whitelist-view');
-const whitelistEditor = document.getElementById('whitelist-editor');
-const whitelistFeedback = document.getElementById('whitelist-feedback');
+const alertModalEl = document.getElementById('alert-modal');
+const alertModal = alertModalEl ? new bootstrap.Modal(alertModalEl) : null;
+const alertModalTitle = document.getElementById('alert-modal-title');
+const alertSubmitLabel = document.getElementById('alert-submit-label');
+const alertFormFeedback = document.getElementById('alert-form-feedback');
+const alertActionOptions = Array.from(document.querySelectorAll('.alert-action-toggle'));
+const alertActionsPreview = document.getElementById('alert-actions-preview');
+const alertActionsCustomInput = document.getElementById('alert-actions-custom');
+const alertFilterSuggestions = document.getElementById('alert-filter-suggestions');
+const openAlertModalBtn = document.getElementById('open-alert-modal');
+const openAlertModalSecondary = document.getElementById('open-alert-modal-secondary');
+const openAlertDocsBtn = document.getElementById('open-alert-docs');
+const configSummary = document.getElementById('config-summary');
+const configForm = document.getElementById('config-form');
+const configFormFeedback = document.getElementById('config-form-feedback');
 const firewallStatus = document.getElementById('firewall-status');
+const whitelistCurrent = document.getElementById('whitelist-current');
+const whitelistForm = document.getElementById('whitelist-form');
+const whitelistIPsInput = document.getElementById('whitelist-ips');
+const whitelistCIDRsInput = document.getElementById('whitelist-cidrs');
+const whitelistFeedback = document.getElementById('whitelist-feedback');
+const reloadWhitelistBtn = document.getElementById('reload-whitelist');
+const configControls = {
+    netflow: document.getElementById('config-netflow'),
+    sflow: document.getElementById('config-sflow'),
+    http: document.getElementById('config-http'),
+    updateInterval: document.getElementById('config-update-interval'),
+    cleanTime: document.getElementById('config-clean-time'),
+    dataPath: document.getElementById('config-data-path'),
+    maxDisk: document.getElementById('config-max-disk'),
+    password: document.getElementById('config-password'),
+    apiNetwork: document.getElementById('config-api-network'),
+    internalBlocks: document.getElementById('config-internal-blocks'),
+    internalASNs: document.getElementById('config-internal-asns'),
+    favoriteASNs: document.getElementById('config-favorite-asns'),
+    favoriteIPs: document.getElementById('config-favorite-ips'),
+    ignoredIPs: document.getElementById('config-ignored-ips'),
+    favoriteServices: document.getElementById('config-favorite-services'),
+    ignoredASNs: document.getElementById('config-ignored-asns'),
+    notificationApply: document.getElementById('config-notification-apply'),
+    telegramEnabled: document.getElementById('config-telegram-enabled'),
+    telegramBot: document.getElementById('config-telegram-bot'),
+    telegramProxy: document.getElementById('config-telegram-proxy'),
+    telegramChatIDs: document.getElementById('config-telegram-chatids'),
+    telegramReplyIDs: document.getElementById('config-telegram-replyids'),
+    telegramAlerts: document.getElementById('config-telegram-alerts'),
+    telegramSystem: document.getElementById('config-telegram-system'),
+    emailEnabled: document.getElementById('config-email-enabled'),
+    emailHost: document.getElementById('config-email-host'),
+    emailPort: document.getElementById('config-email-port'),
+    emailFrom: document.getElementById('config-email-from'),
+    emailUsername: document.getElementById('config-email-username'),
+    emailPassword: document.getElementById('config-email-password'),
+    emailTo: document.getElementById('config-email-to'),
+    emailReplyTo: document.getElementById('config-email-replyto'),
+    emailTLS: document.getElementById('config-email-tls'),
+    emailStartTLS: document.getElementById('config-email-starttls'),
+    firewallNetflow: document.getElementById('config-firewall-netflow'),
+    firewallSflow: document.getElementById('config-firewall-sflow'),
+    firewallAPI: document.getElementById('config-firewall-api'),
+    firewallExport: document.getElementById('config-firewall-export'),
+};
+const routerControls = {
+    name: document.getElementById('router-name'),
+    ip: document.getElementById('router-ip'),
+    port: document.getElementById('router-port'),
+    community: document.getElementById('router-community'),
+    user: document.getElementById('router-user'),
+    auth: document.getElementById('router-auth'),
+    authPass: document.getElementById('router-authpass'),
+    priv: document.getElementById('router-priv'),
+    privPass: document.getElementById('router-privpass'),
+};
 const grafanaList = document.getElementById('grafana-list');
 const bgpTable = document.querySelector('#bgp-table tbody');
 const interfacesTable = document.querySelector('#interfaces-table tbody');
@@ -36,6 +111,13 @@ let sessionCache = null;
 let vendorsCache = [];
 let routersCache = [];
 let alertsCache = [];
+let editingRouterName = null;
+let editingAlertName = null;
+
+if (routerVersionSelect) {
+    routerVersionSelect.addEventListener('change', updateRouterVersionFields);
+    updateRouterVersionFields();
+}
 
 function showToast(message, variant = 'info') {
     const wrapper = document.createElement('div');
@@ -108,6 +190,20 @@ function formatDate(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleString('pt-BR');
+}
+
+function splitList(value = '', asNumber = false) {
+    return value
+        .split(/[,\n]+/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => (asNumber ? Number(item) : item))
+        .filter((item) => (asNumber ? Number.isFinite(item) : true));
+}
+
+function joinMultiline(values = []) {
+    if (!Array.isArray(values) || values.length === 0) return '';
+    return values.join('\n');
 }
 
 function showLogin(message) {
@@ -225,10 +321,193 @@ async function loadVendors() {
     try {
         vendorsCache = await apiFetch('/api/vendors');
         routerVendorSelect.innerHTML = vendorsCache.map((vendor) => `<option value="${vendor}">${vendor}</option>`).join('');
+        if (!routerVendorSelect.value && vendorsCache.length > 0) {
+            routerVendorSelect.value = vendorsCache[0];
+        }
     } catch (error) {
         showToast(`Falha ao carregar vendors: ${error.message}`, 'danger');
     }
 }
+
+function updateRouterVersionFields() {
+    if (!routerVersionSelect) return;
+    const version = routerVersionSelect.value;
+    if (version === '3') {
+        routerCommunityGroup?.classList.add('d-none');
+        routerV3Fields?.classList.remove('d-none');
+    } else {
+        routerCommunityGroup?.classList.remove('d-none');
+        routerV3Fields?.classList.add('d-none');
+    }
+}
+
+function ensureVendorOption(vendor) {
+    if (!vendor || !routerVendorSelect) return;
+    if (![...routerVendorSelect.options].some((opt) => opt.value === vendor)) {
+        const option = document.createElement('option');
+        option.value = vendor;
+        option.textContent = vendor;
+        routerVendorSelect.appendChild(option);
+    }
+}
+
+function openRouterModal(router = null) {
+    if (!routerModal || !routerForm) return;
+    if (routerVendorSelect && routerVendorSelect.options.length === 0 && vendorsCache.length === 0) {
+        loadVendors();
+    }
+    routerForm.reset();
+    routerFormFeedback.textContent = '';
+    editingRouterName = router ? router.name : null;
+    const submitLabel = routerFormSubmit?.querySelector('span');
+    if (router) {
+        routerModalTitle.textContent = `Editar roteador`;
+        if (submitLabel) submitLabel.textContent = 'Salvar alterações';
+    } else {
+        routerModalTitle.textContent = 'Novo roteador';
+        if (submitLabel) submitLabel.textContent = 'Adicionar roteador';
+    }
+
+    const snmp = router?.snmp || {};
+    routerControls.name.value = router?.name || '';
+    if (router?.vendor) {
+        ensureVendorOption(router.vendor);
+        routerVendorSelect.value = router.vendor;
+    } else if (!routerVendorSelect.value && vendorsCache.length > 0) {
+        routerVendorSelect.value = vendorsCache[0];
+    }
+    routerControls.ip.value = snmp.ip || '';
+    routerControls.port.value = snmp.port || 161;
+    routerVersionSelect.value = snmp.version || '2c';
+    routerControls.community.value = snmp.community || 'public';
+    routerControls.user.value = snmp.user || '';
+    routerControls.auth.value = snmp.auth || '';
+    routerControls.authPass.value = snmp.authpass || '';
+    routerControls.priv.value = snmp.priv || '';
+    routerControls.privPass.value = snmp.privpass || '';
+    updateRouterVersionFields();
+    routerModal.show();
+}
+
+openRouterModalBtn?.addEventListener('click', () => openRouterModal());
+routerModalEl?.addEventListener('hidden.bs.modal', () => {
+    editingRouterName = null;
+    routerForm.reset();
+    routerControls.community.value = 'public';
+    routerControls.port.value = 161;
+    if (routerFormSubmit) {
+        const submitLabel = routerFormSubmit.querySelector('span');
+        if (submitLabel) submitLabel.textContent = 'Salvar roteador';
+        routerFormSubmit.disabled = false;
+    }
+    routerFormFeedback.textContent = '';
+    updateRouterVersionFields();
+});
+
+function setAlertActionButtonState(button, active) {
+    if (!button) return;
+    button.classList.toggle('btn-primary', active);
+    button.classList.toggle('btn-outline-light', !active);
+}
+
+function setAlertActionSelections(values = []) {
+    const normalized = new Set(values.map((value) => value.toLowerCase()));
+    alertActionOptions.forEach((button) => {
+        const active = normalized.has(button.dataset.value?.toLowerCase());
+        button.dataset.active = active ? 'true' : 'false';
+        setAlertActionButtonState(button, active);
+    });
+    renderAlertActionsPreview();
+}
+
+function getSelectedAlertActions() {
+    const selected = new Set();
+    alertActionOptions.forEach((button) => {
+        if (button.dataset.active === 'true') {
+            selected.add(button.dataset.value);
+        }
+    });
+    splitList(alertActionsCustomInput?.value || '').forEach((item) => selected.add(item));
+    return Array.from(selected);
+}
+
+function renderAlertActionsPreview() {
+    if (!alertActionsPreview) return;
+    const actions = getSelectedAlertActions();
+    if (actions.length === 0) {
+        alertActionsPreview.textContent = 'Nenhuma ação selecionada.';
+        return;
+    }
+    alertActionsPreview.innerHTML = actions
+        .map((action) => `<span class="badge bg-primary me-1 mb-1">${action}</span>`)
+        .join('');
+}
+
+function openAlertModal(rule = null) {
+    if (!alertModal || !alertForm) return;
+    alertForm.reset();
+    alertFormFeedback.textContent = '';
+    editingAlertName = rule ? rule.name : null;
+    if (rule) {
+        alertModalTitle.textContent = `Editar fluxo`;
+        if (alertSubmitLabel) alertSubmitLabel.textContent = 'Salvar alterações';
+    } else {
+        alertModalTitle.textContent = 'Novo fluxo de alerta';
+        if (alertSubmitLabel) alertSubmitLabel.textContent = 'Criar fluxo';
+    }
+    document.getElementById('alert-name').value = rule?.name || '';
+    document.getElementById('alert-filter').value = rule?.filter || '';
+    document.getElementById('alert-condition').value = rule?.condition || '';
+    document.getElementById('alert-window').value = rule?.time_window_seconds || 60;
+    document.getElementById('alert-comment').value = rule?.comment || '';
+    document.getElementById('alert-enabled').checked = rule ? Boolean(rule.enabled) : true;
+    const actions = Array.isArray(rule?.actions) ? rule.actions : [];
+    const knownActions = new Set(alertActionOptions.map((button) => button.dataset.value?.toLowerCase()));
+    const toggleActions = actions.filter((action) => knownActions.has(action.toLowerCase()));
+    const customActions = actions.filter((action) => !knownActions.has(action.toLowerCase()));
+    alertActionsCustomInput.value = customActions.join(',');
+    setAlertActionSelections(toggleActions);
+    renderAlertActionsPreview();
+    alertModal.show();
+}
+
+alertActionOptions.forEach((button) => {
+    button.addEventListener('click', () => {
+        const isActive = button.dataset.active === 'true';
+        button.dataset.active = isActive ? 'false' : 'true';
+        setAlertActionButtonState(button, !isActive);
+        renderAlertActionsPreview();
+    });
+});
+
+alertActionsCustomInput?.addEventListener('input', renderAlertActionsPreview);
+
+alertFilterSuggestions?.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-filter]');
+    if (!button) return;
+    const field = button.dataset.filter;
+    const filterInput = document.getElementById('alert-filter');
+    if (!filterInput) return;
+    const current = filterInput.value.trim();
+    filterInput.value = current ? `${current} AND ${field}=` : `${field}=`;
+    filterInput.focus();
+});
+
+openAlertModalBtn?.addEventListener('click', () => openAlertModal());
+openAlertModalSecondary?.addEventListener('click', () => openAlertModal());
+openAlertDocsBtn?.addEventListener('click', () => {
+    showToast('Exemplos: Proto=TCP AND DstPort=443 • Bytes > 1000000', 'info');
+});
+
+alertModalEl?.addEventListener('hidden.bs.modal', () => {
+    editingAlertName = null;
+    alertFormFeedback.textContent = '';
+    if (alertSubmitLabel) alertSubmitLabel.textContent = 'Criar fluxo';
+    alertForm.reset();
+    setAlertActionSelections([]);
+});
+
+setAlertActionSelections([]);
 
 async function loadDashboard() {
     await Promise.all([loadSystemStatus(), loadStats(), loadDashboardStats()]);
@@ -496,58 +775,101 @@ routersTable.addEventListener('click', async (event) => {
     }
 
     if (action === 'edit-router') {
+        const current = routersCache.find((item) => item.name === name);
+        if (current) {
+            openRouterModal(current);
+            return;
+        }
         try {
-            const current = await apiFetch(`/api/routers/${encodeURIComponent(name)}`);
-            const updatedText = prompt('Edite o JSON do roteador:', JSON.stringify(current, null, 2));
-            if (!updatedText) return;
-            const payload = JSON.parse(updatedText);
-            await apiFetch(`/api/routers/${encodeURIComponent(name)}`, { method: 'PUT', json: payload });
-            showToast('Roteador atualizado.', 'success');
-            await loadRouters();
-            await loadRouterSummary();
+            const fetched = await apiFetch(`/api/routers/${encodeURIComponent(name)}`);
+            openRouterModal(fetched);
         } catch (error) {
-            showToast(`Falha ao atualizar: ${error.message}`, 'danger');
+            showToast(`Falha ao carregar roteador: ${error.message}`, 'danger');
         }
     }
 });
 
 routerForm.addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (!routerForm) return;
     const payload = {
-        name: document.getElementById('router-name').value.trim(),
-        vendor: document.getElementById('router-vendor').value,
+        name: routerControls.name.value.trim(),
+        vendor: routerVendorSelect.value,
         snmp: {
-            ip: document.getElementById('router-ip').value.trim(),
-            community: document.getElementById('router-community').value.trim() || 'public',
-            port: Number(document.getElementById('router-port').value) || 161,
-            version: document.getElementById('router-version').value,
+            ip: routerControls.ip.value.trim(),
+            community: routerControls.community.value.trim() || 'public',
+            port: Number(routerControls.port.value) || 161,
+            version: routerVersionSelect.value,
+            user: routerControls.user.value.trim(),
+            auth: routerControls.auth.value,
+            authpass: routerControls.authPass.value,
+            priv: routerControls.priv.value,
+            privpass: routerControls.privPass.value,
         },
     };
     if (!payload.name || !payload.snmp.ip) {
-        showToast('Informe nome e IP do roteador.', 'warning');
+        routerFormFeedback.textContent = 'Informe nome e IP do roteador.';
         return;
     }
+    if (!payload.vendor) {
+        routerFormFeedback.textContent = 'Selecione um vendor suportado.';
+        return;
+    }
+    if (payload.snmp.version !== '3') {
+        delete payload.snmp.user;
+        delete payload.snmp.auth;
+        delete payload.snmp.authpass;
+        delete payload.snmp.priv;
+        delete payload.snmp.privpass;
+    }
+    const submitLabel = routerFormSubmit?.querySelector('span');
+    if (routerFormSubmit) {
+        routerFormSubmit.disabled = true;
+        if (submitLabel) submitLabel.textContent = editingRouterName ? 'Salvando...' : 'Adicionando...';
+    }
+    routerFormFeedback.textContent = '';
     try {
-        await apiFetch('/api/routers', { method: 'POST', json: payload });
-        routerForm.reset();
-        document.getElementById('router-community').value = 'public';
-        document.getElementById('router-port').value = 161;
-        showToast('Roteador cadastrado.', 'success');
+        if (editingRouterName) {
+            await apiFetch(`/api/routers/${encodeURIComponent(editingRouterName)}`, { method: 'PUT', json: payload });
+            showToast('Roteador atualizado.', 'success');
+        } else {
+            await apiFetch('/api/routers', { method: 'POST', json: payload });
+            showToast('Roteador cadastrado.', 'success');
+        }
+        routerModal?.hide();
         await loadRouters();
         await loadRouterSummary();
     } catch (error) {
-        showToast(`Falha ao cadastrar: ${error.message}`, 'danger');
+        routerFormFeedback.textContent = error.message;
+    } finally {
+        if (routerFormSubmit) {
+            routerFormSubmit.disabled = false;
+            if (submitLabel) submitLabel.textContent = editingRouterName ? 'Salvar alterações' : 'Adicionar roteador';
+        }
     }
 });
 
 snmpTestForm.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const version = document.getElementById('snmp-test-version').value;
     const payload = {
         ip: document.getElementById('snmp-test-ip').value.trim(),
         community: document.getElementById('snmp-test-community').value.trim() || 'public',
         port: Number(document.getElementById('snmp-test-port').value) || 161,
-        version: '2c',
+        version,
+        user: document.getElementById('snmp-test-user').value.trim(),
+        auth: document.getElementById('snmp-test-auth').value,
+        authpass: document.getElementById('snmp-test-authpass').value,
+        priv: document.getElementById('snmp-test-priv').value,
+        privpass: document.getElementById('snmp-test-privpass').value,
     };
+    if (version !== '3') {
+        delete payload.user;
+        delete payload.auth;
+        delete payload.authpass;
+        delete payload.priv;
+        delete payload.privpass;
+    }
     snmpTestResult.textContent = 'Executando teste...';
     snmpTestResult.classList.remove('text-danger');
     try {
@@ -689,22 +1011,21 @@ alertsTable.addEventListener('click', async (event) => {
         }
 
     if (action === 'edit-alert') {
+        const current = alertsCache.find((item) => item.name === name);
+        if (current) {
+            openAlertModal(current);
+            return;
+        }
         try {
             const alerts = await apiFetch('/api/alerts');
-            const current = alerts.find((item) => item.name === name);
-            if (!current) {
+            const fallback = alerts.find((item) => item.name === name);
+            if (!fallback) {
                 showToast('Regra não encontrada.', 'warning');
                 return;
             }
-            const updated = prompt('Atualize o JSON da regra:', JSON.stringify(current, null, 2));
-            if (!updated) return;
-            const payload = JSON.parse(updated);
-            await apiFetch(`/api/alerts/${encodeURIComponent(name)}`, { method: 'PUT', json: payload });
-            showToast('Regra atualizada.', 'success');
-            await loadAlerts();
-            await loadAlertInsights();
+            openAlertModal(fallback);
         } catch (error) {
-            showToast(`Falha ao atualizar: ${error.message}`, 'danger');
+            showToast(`Falha ao carregar regra: ${error.message}`, 'danger');
         }
     }
 });
@@ -716,27 +1037,141 @@ alertForm.addEventListener('submit', async (event) => {
         filter: document.getElementById('alert-filter').value.trim(),
         condition: document.getElementById('alert-condition').value.trim(),
         time_window_seconds: Number(document.getElementById('alert-window').value) || 60,
-        actions: document.getElementById('alert-actions').value.split(',').map((item) => item.trim()).filter(Boolean),
+        actions: getSelectedAlertActions(),
         comment: document.getElementById('alert-comment').value.trim(),
         enabled: document.getElementById('alert-enabled').checked,
     };
+    if (!payload.name) {
+        alertFormFeedback.textContent = 'Informe um nome para a regra.';
+        return;
+    }
+    alertFormFeedback.textContent = '';
+    const submitBtn = alertForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        if (alertSubmitLabel) alertSubmitLabel.textContent = editingAlertName ? 'Salvando...' : 'Criando...';
+    }
     try {
-        await apiFetch('/api/alerts', { method: 'POST', json: payload });
-        alertForm.reset();
-        document.getElementById('alert-window').value = 60;
-        document.getElementById('alert-enabled').checked = true;
-        showToast('Regra criada com sucesso.', 'success');
+        if (editingAlertName) {
+            await apiFetch(`/api/alerts/${encodeURIComponent(editingAlertName)}`, { method: 'PUT', json: payload });
+            showToast('Regra atualizada.', 'success');
+        } else {
+            await apiFetch('/api/alerts', { method: 'POST', json: payload });
+            showToast('Regra criada com sucesso.', 'success');
+        }
+        alertModal?.hide();
         await loadAlerts();
         await loadAlertInsights();
     } catch (error) {
-        showToast(`Falha ao criar regra: ${error.message}`, 'danger');
+        alertFormFeedback.textContent = error.message;
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            if (alertSubmitLabel) alertSubmitLabel.textContent = editingAlertName ? 'Salvar alterações' : 'Criar fluxo';
+        }
     }
 });
+
+function renderConfigSummary(cfg = {}) {
+    if (!configSummary) return;
+    const cards = [
+        {
+            icon: 'network-wired',
+            title: 'Fontes monitoradas',
+            value: formatNumber((cfg.sources || []).length),
+            detail: cfg.snmp_enabled ? 'SNMP habilitado' : 'SNMP desabilitado',
+        },
+        {
+            icon: 'plug',
+            title: 'Portas de ingestão',
+            value: `NetFlow ${cfg.netflow_port || '-'} • sFlow ${cfg.sflow_port || '-'}`,
+            detail: `API HTTP: ${cfg.http_port || '-'}`,
+        },
+        {
+            icon: 'clock',
+            title: 'Intervalos',
+            value: `${cfg.update_interval_minutes || 0} min`,
+            detail: `Limpeza ClickHouse: ${cfg.clickhouse_clean_time || 0} min`,
+        },
+        {
+            icon: 'hdd',
+            title: 'Armazenamento',
+            value: cfg.maximum_disk_gb ? `${cfg.maximum_disk_gb} GB` : '-',
+            detail: cfg.data_path || '-',
+        },
+    ];
+    configSummary.innerHTML = cards
+        .map(
+            (card) => `
+            <div class="col-md-6 col-xl-3">
+                <div class="card h-100 bg-body-tertiary border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-secondary text-uppercase small">${card.title}</span>
+                            <i class="fa-solid fa-${card.icon} text-primary"></i>
+                        </div>
+                        <p class="fs-4 fw-semibold mt-2 mb-1">${card.value}</p>
+                        <p class="text-secondary mb-0">${card.detail}</p>
+                    </div>
+                </div>
+            </div>`
+        )
+        .join('');
+}
+
+function fillConfigForm(cfg = {}) {
+    if (!configControls.netflow) return;
+    configControls.netflow.value = cfg.netflow_port ?? '';
+    configControls.sflow.value = cfg.sflow_port ?? '';
+    configControls.http.value = cfg.http_port ?? '';
+    configControls.updateInterval.value = cfg.update_interval_minutes ?? '';
+    configControls.cleanTime.value = cfg.clickhouse_clean_time ?? '';
+    configControls.dataPath.value = cfg.data_path || '';
+    configControls.maxDisk.value = cfg.maximum_disk_gb ?? '';
+    configControls.password.value = '';
+    configControls.apiNetwork.value = joinMultiline(cfg.api_network || []);
+    configControls.internalBlocks.value = joinMultiline(cfg.internal_ip_blocks || []);
+    configControls.internalASNs.value = joinMultiline((cfg.internal_asns || []).map(String));
+    configControls.favoriteASNs.value = joinMultiline((cfg.favorite_asns || []).map(String));
+    configControls.favoriteIPs.value = joinMultiline(cfg.favorite_ips || []);
+    configControls.ignoredIPs.value = joinMultiline(cfg.ignored_ips || []);
+    configControls.favoriteServices.value = joinMultiline(cfg.favorite_services || []);
+    configControls.ignoredASNs.value = joinMultiline((cfg.ignored_asns || []).map(String));
+    configControls.notificationApply.checked = false;
+
+    const telegram = cfg.notification?.telegram || {};
+    configControls.telegramEnabled.checked = Boolean(telegram.enabled);
+    configControls.telegramBot.value = '';
+    configControls.telegramProxy.value = telegram.proxy || '';
+    configControls.telegramChatIDs.value = joinMultiline(telegram.chat_ids || []);
+    configControls.telegramReplyIDs.value = joinMultiline(telegram.reply_ids || []);
+    configControls.telegramAlerts.checked = Boolean(telegram.notify_alerts);
+    configControls.telegramSystem.checked = Boolean(telegram.notify_system);
+
+    const email = cfg.notification?.email || {};
+    configControls.emailEnabled.checked = Boolean(email.enabled);
+    configControls.emailHost.value = email.smtp_host || '';
+    configControls.emailPort.value = email.smtp_port ?? '';
+    configControls.emailFrom.value = email.from || '';
+    configControls.emailUsername.value = email.username || '';
+    configControls.emailPassword.value = '';
+    configControls.emailTo.value = joinMultiline(email.to || []);
+    configControls.emailReplyTo.value = joinMultiline(email.reply_to || []);
+    configControls.emailTLS.checked = Boolean(email.use_tls);
+    configControls.emailStartTLS.checked = Boolean(email.start_tls);
+
+    const firewall = cfg.firewall || {};
+    configControls.firewallNetflow.value = joinMultiline(firewall.netflow_allowed || []);
+    configControls.firewallSflow.value = joinMultiline(firewall.sflow_allowed || []);
+    configControls.firewallAPI.value = joinMultiline(firewall.api_allowed || []);
+    configControls.firewallExport.value = joinMultiline(firewall.interface_export || []);
+}
 
 async function loadConfig() {
     try {
         const cfg = await apiFetch('/api/config');
-        configView.textContent = JSON.stringify(cfg, null, 2);
+        renderConfigSummary(cfg);
+        fillConfigForm(cfg);
     } catch (error) {
         showToast(`Erro ao carregar configuração: ${error.message}`, 'danger');
     }
@@ -744,40 +1179,139 @@ async function loadConfig() {
 
 document.getElementById('reload-config').addEventListener('click', loadConfig);
 
-document.getElementById('save-config').addEventListener('click', async () => {
-    if (!configEditor.value.trim()) {
-        configFeedback.textContent = 'Informe um JSON para atualizar.';
-        configFeedback.classList.add('text-danger');
-        return;
+configForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const payload = {};
+    const netflow = Number(configControls.netflow.value);
+    if (Number.isFinite(netflow)) payload.netflow_port = netflow;
+    const sflow = Number(configControls.sflow.value);
+    if (Number.isFinite(sflow)) payload.sflow_port = sflow;
+    const httpPort = Number(configControls.http.value);
+    if (Number.isFinite(httpPort)) payload.http_port = httpPort;
+    const updateInterval = Number(configControls.updateInterval.value);
+    if (Number.isFinite(updateInterval)) payload.update_interval_minutes = updateInterval;
+    const cleanTime = Number(configControls.cleanTime.value);
+    if (Number.isFinite(cleanTime)) payload.clickhouse_clean_time = cleanTime;
+    const maxDisk = Number(configControls.maxDisk.value);
+    if (Number.isFinite(maxDisk)) payload.maximum_disk_gb = maxDisk;
+    if (configControls.dataPath.value.trim()) payload.data_path = configControls.dataPath.value.trim();
+    if (configControls.password.value.trim()) payload.password = configControls.password.value.trim();
+
+    payload.api_network = splitList(configControls.apiNetwork.value);
+    payload.internal_ip_blocks = splitList(configControls.internalBlocks.value);
+    payload.internal_asns = splitList(configControls.internalASNs.value, true);
+    payload.favorite_asns = splitList(configControls.favoriteASNs.value, true);
+    payload.favorite_ips = splitList(configControls.favoriteIPs.value);
+    payload.ignored_ips = splitList(configControls.ignoredIPs.value);
+    payload.favorite_services = splitList(configControls.favoriteServices.value);
+    payload.ignored_asns = splitList(configControls.ignoredASNs.value, true);
+
+    if (configControls.notificationApply.checked) {
+        const telegram = {
+            enabled: configControls.telegramEnabled.checked,
+            proxy: configControls.telegramProxy.value.trim(),
+            chat_ids: splitList(configControls.telegramChatIDs.value),
+            reply_ids: splitList(configControls.telegramReplyIDs.value),
+            notify_alerts: configControls.telegramAlerts.checked,
+            notify_system: configControls.telegramSystem.checked,
+        };
+        const botToken = configControls.telegramBot.value.trim();
+        if (botToken) telegram.bot_token = botToken;
+
+        const email = {
+            enabled: configControls.emailEnabled.checked,
+            smtp_host: configControls.emailHost.value.trim(),
+            smtp_port: Number(configControls.emailPort.value) || 0,
+            username: configControls.emailUsername.value.trim(),
+            from: configControls.emailFrom.value.trim(),
+            to: splitList(configControls.emailTo.value),
+            reply_to: splitList(configControls.emailReplyTo.value),
+            use_tls: configControls.emailTLS.checked,
+            start_tls: configControls.emailStartTLS.checked,
+        };
+        const emailPassword = configControls.emailPassword.value.trim();
+        if (emailPassword) email.password = emailPassword;
+        if (!email.smtp_host) delete email.smtp_host;
+        if (!email.from) delete email.from;
+        if (!Number.isFinite(email.smtp_port) || email.smtp_port <= 0) delete email.smtp_port;
+
+        payload.notification = {
+            telegram,
+            email,
+        };
     }
+
+    const firewall = {
+        netflow_allowed: splitList(configControls.firewallNetflow.value),
+        sflow_allowed: splitList(configControls.firewallSflow.value),
+        api_allowed: splitList(configControls.firewallAPI.value),
+        interface_export: splitList(configControls.firewallExport.value),
+    };
+    if (
+        firewall.netflow_allowed.length ||
+        firewall.sflow_allowed.length ||
+        firewall.api_allowed.length ||
+        firewall.interface_export.length
+    ) {
+        payload.firewall = firewall;
+    }
+
+    const submitBtn = configForm.querySelector('button[type="submit"]');
+    configFormFeedback.textContent = '';
+    configFormFeedback.classList.remove('text-danger');
+    if (submitBtn) submitBtn.disabled = true;
     try {
-        const payload = JSON.parse(configEditor.value);
-        const response = await apiFetch('/api/config', { method: 'PUT', json: payload });
-        configView.textContent = JSON.stringify(response, null, 2);
-        configFeedback.textContent = 'Configuração aplicada com sucesso.';
-        configFeedback.classList.remove('text-danger');
+        await apiFetch('/api/config', { method: 'PUT', json: payload });
         showToast('Configuração atualizada.', 'success');
+        configControls.notificationApply.checked = false;
+        configFormFeedback.textContent = 'Parâmetros atualizados com sucesso.';
+        await loadConfig();
     } catch (error) {
-        configFeedback.textContent = error.message;
-        configFeedback.classList.add('text-danger');
+        configFormFeedback.textContent = error.message;
+        configFormFeedback.classList.add('text-danger');
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
     }
 });
+
+function renderWhitelistCurrent(ips = [], cidrs = []) {
+    if (!whitelistCurrent) return;
+    const badges = [];
+    ips.forEach((ip) => badges.push(`<span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">${ip}</span>`));
+    cidrs.forEach((cidr) => badges.push(`<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">${cidr}</span>`));
+    whitelistCurrent.innerHTML = badges.length
+        ? badges.join(' ')
+        : '<span class="text-secondary">Nenhuma entrada cadastrada.</span>';
+}
 
 async function loadWhitelist() {
     try {
         const data = await apiFetch('/api/whitelist');
-        whitelistView.textContent = JSON.stringify(data, null, 2);
+        const ips = Array.isArray(data?.ips) ? data.ips : [];
+        const cidrs = Array.isArray(data?.cidrs) ? data.cidrs : [];
+        whitelistIPsInput.value = joinMultiline(ips);
+        whitelistCIDRsInput.value = joinMultiline(cidrs);
+        renderWhitelistCurrent(ips, cidrs);
+        whitelistFeedback.textContent = '';
+        whitelistFeedback.classList.remove('text-danger');
     } catch (error) {
         showToast(`Erro ao carregar whitelist: ${error.message}`, 'danger');
     }
 }
 
-document.getElementById('save-whitelist').addEventListener('click', async () => {
+reloadWhitelistBtn?.addEventListener('click', loadWhitelist);
+
+whitelistForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const payload = {
+        ips: splitList(whitelistIPsInput.value),
+        cidrs: splitList(whitelistCIDRsInput.value),
+    };
+    whitelistFeedback.textContent = '';
+    whitelistFeedback.classList.remove('text-danger');
     try {
-        const payload = whitelistEditor.value.trim() ? JSON.parse(whitelistEditor.value) : { ips: [], cidrs: [] };
         await apiFetch('/api/whitelist', { method: 'PUT', json: payload });
         whitelistFeedback.textContent = 'Whitelist salva com sucesso.';
-        whitelistFeedback.classList.remove('text-danger');
         showToast('Whitelist atualizada.', 'success');
         await loadWhitelist();
     } catch (error) {
