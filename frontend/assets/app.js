@@ -17,8 +17,6 @@ const routerVersionSelect = document.getElementById('router-version');
 const routerCommunityGroup = document.getElementById('router-community-group');
 const routerV3Fields = document.getElementById('router-v3-fields');
 const openRouterModalBtn = document.getElementById('open-router-modal');
-const snmpTestForm = document.getElementById('snmp-test-form');
-const snmpTestResult = document.getElementById('snmp-test-result');
 const routersTable = document.querySelector('#routers-table tbody');
 const alertsTable = document.querySelector('#alerts-table tbody');
 const alertForm = document.getElementById('alert-form');
@@ -34,6 +32,14 @@ const alertFilterSuggestions = document.getElementById('alert-filter-suggestions
 const openAlertModalBtn = document.getElementById('open-alert-modal');
 const openAlertModalSecondary = document.getElementById('open-alert-modal-secondary');
 const openAlertDocsBtn = document.getElementById('open-alert-docs');
+const alertFilterJoinRadios = Array.from(document.querySelectorAll('input[name="alert-filter-join"]'));
+const jsonModalEl = document.getElementById('json-editor-modal');
+const jsonModal = jsonModalEl ? new bootstrap.Modal(jsonModalEl) : null;
+const jsonModalTitle = document.getElementById('json-modal-title');
+const jsonModalTextarea = document.getElementById('json-modal-textarea');
+const jsonModalFeedback = document.getElementById('json-modal-feedback');
+const jsonModalSave = document.getElementById('json-modal-save');
+const jsonModalRefresh = document.getElementById('json-modal-refresh');
 const configSummary = document.getElementById('config-summary');
 const configForm = document.getElementById('config-form');
 const configFormFeedback = document.getElementById('config-form-feedback');
@@ -113,6 +119,7 @@ let routersCache = [];
 let alertsCache = [];
 let editingRouterName = null;
 let editingAlertName = null;
+let jsonModalContext = null;
 
 if (routerVersionSelect) {
     routerVersionSelect.addEventListener('change', updateRouterVersionFields);
@@ -443,6 +450,26 @@ function renderAlertActionsPreview() {
         .join('');
 }
 
+function getSelectedFilterJoin() {
+    const checked = document.querySelector('input[name="alert-filter-join"]:checked');
+    return checked ? checked.value : 'AND';
+}
+
+function setSelectedFilterJoin(value) {
+    alertFilterJoinRadios.forEach((radio) => {
+        radio.checked = radio.value === value;
+    });
+}
+
+function setJsonModalFeedback(message = '', variant = '') {
+    if (!jsonModalFeedback) return;
+    jsonModalFeedback.textContent = message;
+    jsonModalFeedback.classList.remove('text-danger', 'text-success', 'text-info');
+    if (variant) {
+        jsonModalFeedback.classList.add(`text-${variant}`);
+    }
+}
+
 function openAlertModal(rule = null) {
     if (!alertModal || !alertForm) return;
     alertForm.reset();
@@ -456,7 +483,9 @@ function openAlertModal(rule = null) {
         if (alertSubmitLabel) alertSubmitLabel.textContent = 'Criar fluxo';
     }
     document.getElementById('alert-name').value = rule?.name || '';
-    document.getElementById('alert-filter').value = rule?.filter || '';
+    const filterValue = rule?.filter || '';
+    document.getElementById('alert-filter').value = filterValue;
+    setSelectedFilterJoin(filterValue.includes(' OR ') ? 'OR' : 'AND');
     document.getElementById('alert-condition').value = rule?.condition || '';
     document.getElementById('alert-window').value = rule?.time_window_seconds || 60;
     document.getElementById('alert-comment').value = rule?.comment || '';
@@ -489,14 +518,15 @@ alertFilterSuggestions?.addEventListener('click', (event) => {
     const filterInput = document.getElementById('alert-filter');
     if (!filterInput) return;
     const current = filterInput.value.trim();
-    filterInput.value = current ? `${current} AND ${field}=` : `${field}=`;
+    const joiner = getSelectedFilterJoin();
+    filterInput.value = current ? `${current} ${joiner} ${field}=` : `${field}=`;
     filterInput.focus();
 });
 
 openAlertModalBtn?.addEventListener('click', () => openAlertModal());
 openAlertModalSecondary?.addEventListener('click', () => openAlertModal());
 openAlertDocsBtn?.addEventListener('click', () => {
-    showToast('Exemplos: Proto=TCP AND DstPort=443 • Bytes > 1000000', 'info');
+    showToast('Exemplos: SrcASN=15169 OR Country=BR • Bps > 1000000 AND Packets > 1000 • ThreatCategory=botnet AND Action=block', 'info');
 });
 
 alertModalEl?.addEventListener('hidden.bs.modal', () => {
@@ -504,10 +534,26 @@ alertModalEl?.addEventListener('hidden.bs.modal', () => {
     alertFormFeedback.textContent = '';
     if (alertSubmitLabel) alertSubmitLabel.textContent = 'Criar fluxo';
     alertForm.reset();
+    setSelectedFilterJoin('AND');
     setAlertActionSelections([]);
 });
 
 setAlertActionSelections([]);
+
+jsonModalSave?.addEventListener('click', saveJsonModal);
+jsonModalRefresh?.addEventListener('click', refreshPeersFromModal);
+jsonModalEl?.addEventListener('hidden.bs.modal', () => {
+    jsonModalContext = null;
+    if (jsonModalTextarea) {
+        jsonModalTextarea.value = '';
+        jsonModalTextarea.readOnly = false;
+    }
+    if (jsonModalSave) {
+        jsonModalSave.disabled = false;
+    }
+    configureJsonModal('');
+    setJsonModalFeedback('');
+});
 
 async function loadDashboard() {
     await Promise.all([loadSystemStatus(), loadStats(), loadDashboardStats()]);
@@ -624,6 +670,164 @@ async function loadDashboardStats() {
     }
 }
 
+function buildSnmpPayloadFromRouter(router) {
+    const snmp = router?.snmp || {};
+    const payload = {
+        ip: snmp.ip || '',
+        port: snmp.port || 161,
+        version: snmp.version || '2c',
+        community: snmp.community || 'public',
+        user: snmp.user || '',
+        auth: snmp.auth || '',
+        authpass: snmp.authpass || '',
+        priv: snmp.priv || '',
+        privpass: snmp.privpass || '',
+    };
+    if (payload.version !== '3') {
+        delete payload.user;
+        delete payload.auth;
+        delete payload.authpass;
+        delete payload.priv;
+        delete payload.privpass;
+    }
+    return payload;
+}
+
+async function runSnmpTestForRouter(router) {
+    if (!router) {
+        showToast('Não foi possível carregar os dados do roteador para o teste SNMP.', 'danger');
+        return;
+    }
+    const payload = buildSnmpPayloadFromRouter(router);
+    if (!payload.ip) {
+        showToast(`Roteador ${router.name} não possui IP SNMP configurado.`, 'warning');
+        return;
+    }
+    showToast(`Testando SNMP em ${router.name}...`, 'info');
+    try {
+        const response = await apiFetch('/api/snmp/test', { method: 'POST', json: payload });
+        const detail = response.description ? ` (${response.description})` : '';
+        showToast(`SNMP ok em ${router.name}${detail}`, 'success');
+    } catch (error) {
+        showToast(`Falha no SNMP de ${router.name}: ${error.message}`, 'danger');
+    }
+}
+
+function configureJsonModal(mode) {
+    if (!jsonModalRefresh) return;
+    if (mode === 'peers') {
+        jsonModalRefresh.classList.remove('d-none');
+        jsonModalRefresh.disabled = false;
+    } else {
+        jsonModalRefresh.classList.add('d-none');
+        jsonModalRefresh.disabled = true;
+    }
+}
+
+async function openJsonModalForRouter(mode, routerName) {
+    if (!jsonModal || !jsonModalTextarea || !jsonModalSave || !routerName) return;
+    jsonModalContext = { mode, routerName };
+    setJsonModalFeedback('Carregando...', 'info');
+    jsonModalTitle.textContent = mode === 'peers' ? `Peers de ${routerName}` : `Interfaces de ${routerName}`;
+    jsonModalTextarea.value = '';
+    jsonModalTextarea.readOnly = true;
+    jsonModalSave.disabled = true;
+    configureJsonModal(mode);
+    jsonModal.show();
+    try {
+        const endpoint = mode === 'peers'
+            ? `/api/routers/${encodeURIComponent(routerName)}/peers`
+            : `/api/routers/${encodeURIComponent(routerName)}/interfaces`;
+        const data = await apiFetch(endpoint);
+        jsonModalTextarea.value = JSON.stringify(data, null, 2);
+        jsonModalTextarea.readOnly = false;
+        jsonModalSave.disabled = false;
+        const hint = mode === 'peers'
+            ? 'Use "Atualizar via SNMP" para sincronizar com o roteador.'
+            : 'Edite os campos conforme necessário e salve para atualizar o cache local.';
+        setJsonModalFeedback(hint, 'info');
+    } catch (error) {
+        const message = error.message || 'Não foi possível carregar os dados.';
+        jsonModalTextarea.value = mode === 'peers' ? '[]' : JSON.stringify({ vendor: '', source_ip: '', interfaces: {} }, null, 2);
+        jsonModalTextarea.readOnly = false;
+        jsonModalSave.disabled = false;
+        if (mode === 'peers' && jsonModalRefresh) {
+            jsonModalRefresh.disabled = false;
+        }
+        const variant = /sem|nenhum/i.test(message) ? 'info' : 'danger';
+        setJsonModalFeedback(message, variant);
+    }
+}
+
+async function saveJsonModal() {
+    if (!jsonModalContext || !jsonModalTextarea || !jsonModalSave) return;
+    const { mode, routerName } = jsonModalContext;
+    const endpoint = mode === 'peers'
+        ? `/api/routers/${encodeURIComponent(routerName)}/peers`
+        : `/api/routers/${encodeURIComponent(routerName)}/interfaces`;
+    let payload;
+    try {
+        payload = JSON.parse(jsonModalTextarea.value || (mode === 'peers' ? '[]' : '{}'));
+    } catch (error) {
+        setJsonModalFeedback(`JSON inválido: ${error.message}`, 'danger');
+        return;
+    }
+    setJsonModalFeedback('Salvando alterações...', 'info');
+    jsonModalTextarea.readOnly = true;
+    jsonModalSave.disabled = true;
+    if (jsonModalRefresh && mode === 'peers') {
+        jsonModalRefresh.disabled = true;
+    }
+    try {
+        await apiFetch(endpoint, { method: 'PUT', json: payload });
+        const successMessage = mode === 'peers'
+            ? `Peers de ${routerName} atualizados.`
+            : `Interfaces de ${routerName} atualizadas.`;
+        showToast(successMessage, 'success');
+        if (mode === 'peers') {
+            await loadBGPPeers();
+            if (jsonModalRefresh) jsonModalRefresh.disabled = false;
+        } else {
+            await loadInterfaces();
+        }
+        jsonModalTextarea.readOnly = false;
+        jsonModalSave.disabled = false;
+        setJsonModalFeedback('Alterações salvas.', 'success');
+    } catch (error) {
+        jsonModalTextarea.readOnly = false;
+        jsonModalSave.disabled = false;
+        if (jsonModalRefresh && mode === 'peers') {
+            jsonModalRefresh.disabled = false;
+        }
+        setJsonModalFeedback(error.message, 'danger');
+    }
+}
+
+async function refreshPeersFromModal() {
+    if (!jsonModalContext || jsonModalContext.mode !== 'peers' || !jsonModalTextarea || !jsonModalRefresh) {
+        return;
+    }
+    const { routerName } = jsonModalContext;
+    setJsonModalFeedback('Consultando SNMP...', 'info');
+    jsonModalTextarea.readOnly = true;
+    jsonModalSave.disabled = true;
+    jsonModalRefresh.disabled = true;
+    try {
+        const data = await apiFetch(`/api/routers/${encodeURIComponent(routerName)}/peers/refresh`, {
+            method: 'POST',
+        });
+        jsonModalTextarea.value = JSON.stringify(data, null, 2);
+        setJsonModalFeedback('Peers sincronizados com o roteador.', 'success');
+        await loadBGPPeers();
+    } catch (error) {
+        setJsonModalFeedback(error.message, 'danger');
+    } finally {
+        jsonModalTextarea.readOnly = false;
+        jsonModalSave.disabled = false;
+        jsonModalRefresh.disabled = false;
+    }
+}
+
 async function loadRouters() {
     try {
         const routers = await apiFetch('/api/routers');
@@ -642,12 +846,22 @@ async function loadRouters() {
                     <td>${snmp.ip || '-'}</td>
                     <td>v${snmp.version || '-'} @ ${snmp.port || 161}</td>
                     <td class="text-nowrap">
-                        <button class="btn btn-sm btn-outline-light me-1" data-action="edit-router" data-name="${encodeURIComponent(router.name)}">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" data-action="delete-router" data-name="${encodeURIComponent(router.name)}">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-outline-light" data-action="edit-router" data-name="${encodeURIComponent(router.name)}">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn btn-outline-light dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Ações</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                                <li><button class="dropdown-item" type="button" data-action="snmp-test" data-name="${encodeURIComponent(router.name)}"><i class="fa-solid fa-stethoscope me-2"></i>Testar SNMP</button></li>
+                                <li><button class="dropdown-item" type="button" data-action="interfaces-json" data-name="${encodeURIComponent(router.name)}"><i class="fa-solid fa-code me-2"></i>Interfaces (JSON)</button></li>
+                                <li><button class="dropdown-item" type="button" data-action="peers-json" data-name="${encodeURIComponent(router.name)}"><i class="fa-solid fa-cloud me-2"></i>Peers (JSON)</button></li>
+                                <li><button class="dropdown-item" type="button" data-action="peers-refresh" data-name="${encodeURIComponent(router.name)}"><i class="fa-solid fa-rotate me-2"></i>Atualizar peers SNMP</button></li>
+                                <li><hr class="dropdown-divider" /></li>
+                                <li><button class="dropdown-item text-danger" type="button" data-action="delete-router" data-name="${encodeURIComponent(router.name)}"><i class="fa-solid fa-trash me-2"></i>Remover</button></li>
+                            </ul>
+                        </div>
                     </td>
                 </tr>`;
             })
@@ -756,7 +970,7 @@ function renderRouterSummary(stats = {}, dashboard = {}) {
 }
 
 routersTable.addEventListener('click', async (event) => {
-    const button = event.target.closest('button[data-action]');
+    const button = event.target.closest('[data-action]');
     if (!button) return;
     const action = button.dataset.action;
     const name = decodeURIComponent(button.dataset.name || '');
@@ -785,6 +999,36 @@ routersTable.addEventListener('click', async (event) => {
             openRouterModal(fetched);
         } catch (error) {
             showToast(`Falha ao carregar roteador: ${error.message}`, 'danger');
+        }
+    }
+
+    if (action === 'snmp-test') {
+        const current = routersCache.find((item) => item.name === name);
+        await runSnmpTestForRouter(current || null);
+        return;
+    }
+
+    if (action === 'interfaces-json') {
+        await openJsonModalForRouter('interfaces', name);
+        return;
+    }
+
+    if (action === 'peers-json') {
+        await openJsonModalForRouter('peers', name);
+        return;
+    }
+
+    if (action === 'peers-refresh') {
+        try {
+            const data = await apiFetch(`/api/routers/${encodeURIComponent(name)}/peers/refresh`, { method: 'POST' });
+            showToast(`Peers atualizados via SNMP para ${name}.`, 'success');
+            await loadBGPPeers();
+            if (jsonModalContext && jsonModalContext.mode === 'peers' && jsonModalContext.routerName === name && jsonModalTextarea) {
+                jsonModalTextarea.value = JSON.stringify(data, null, 2);
+                setJsonModalFeedback('Peers sincronizados com o roteador.', 'success');
+            }
+        } catch (error) {
+            showToast(`Falha ao atualizar peers de ${name}: ${error.message}`, 'danger');
         }
     }
 });
@@ -846,38 +1090,6 @@ routerForm.addEventListener('submit', async (event) => {
             routerFormSubmit.disabled = false;
             if (submitLabel) submitLabel.textContent = editingRouterName ? 'Salvar alterações' : 'Adicionar roteador';
         }
-    }
-});
-
-snmpTestForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const version = document.getElementById('snmp-test-version').value;
-    const payload = {
-        ip: document.getElementById('snmp-test-ip').value.trim(),
-        community: document.getElementById('snmp-test-community').value.trim() || 'public',
-        port: Number(document.getElementById('snmp-test-port').value) || 161,
-        version,
-        user: document.getElementById('snmp-test-user').value.trim(),
-        auth: document.getElementById('snmp-test-auth').value,
-        authpass: document.getElementById('snmp-test-authpass').value,
-        priv: document.getElementById('snmp-test-priv').value,
-        privpass: document.getElementById('snmp-test-privpass').value,
-    };
-    if (version !== '3') {
-        delete payload.user;
-        delete payload.auth;
-        delete payload.authpass;
-        delete payload.priv;
-        delete payload.privpass;
-    }
-    snmpTestResult.textContent = 'Executando teste...';
-    snmpTestResult.classList.remove('text-danger');
-    try {
-        const response = await apiFetch('/api/snmp/test', { method: 'POST', json: payload });
-        snmpTestResult.textContent = `${response.message} (${response.description || 'sem descrição'})`;
-    } catch (error) {
-        snmpTestResult.textContent = error.message;
-        snmpTestResult.classList.add('text-danger');
     }
 });
 

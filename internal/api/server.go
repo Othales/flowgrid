@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 	"sync"
@@ -23,23 +24,27 @@ import (
 )
 
 type App struct {
-	cfg           *types.Config
-	conn          clickhouse.Conn
-	interfaceMap  *snmp.InterfaceMap
-	pipeline      *collector.Pipeline
-	detector      *detection.Detector
-	resolver      *enrichment.Resolver
-	geo           *enrichment.GeoIPService
-	threats       *enrichment.ThreatIntelService
-	backup        *storage.BackupManager
-	sampler       *collector.AdaptiveSampler
-	startTime     time.Time
-	configMux     sync.RWMutex
-	configPath    string
-	alertRules    []types.AlertRule
-	alertPath     string
-	whitelist     *types.Whitelist
-	whitelistPath string
+	cfg            *types.Config
+	conn           clickhouse.Conn
+	interfaceMap   *snmp.InterfaceMap
+	interfacesPath string
+	pipeline       *collector.Pipeline
+	detector       *detection.Detector
+	resolver       *enrichment.Resolver
+	geo            *enrichment.GeoIPService
+	threats        *enrichment.ThreatIntelService
+	backup         *storage.BackupManager
+	sampler        *collector.AdaptiveSampler
+	startTime      time.Time
+	configMux      sync.RWMutex
+	configPath     string
+	alertRules     []types.AlertRule
+	alertPath      string
+	whitelist      *types.Whitelist
+	whitelistPath  string
+	peersMux       sync.RWMutex
+	peersCache     map[string][]types.BGPNeighbor
+	peersPath      string
 }
 
 func Run(parentCtx context.Context) error {
@@ -74,8 +79,20 @@ func Run(parentCtx context.Context) error {
 		return err
 	}
 
+	interfacePath := "interfaces.json"
 	interfaceMap := snmp.NewInterfaceMap()
-	if err := interfaceMap.LoadFromFile("interfaces.json"); err != nil {
+	if err := interfaceMap.LoadFromFile(interfacePath); err != nil {
+		return err
+	}
+
+	peersPath := "peers.json"
+	peersCache := make(map[string][]types.BGPNeighbor)
+	if data, err := os.ReadFile(peersPath); err == nil {
+		if err := json.Unmarshal(data, &peersCache); err != nil {
+			log.Printf("AVISO: falha ao carregar peers salvos (%s): %v", peersPath, err)
+			peersCache = make(map[string][]types.BGPNeighbor)
+		}
+	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 
@@ -136,22 +153,25 @@ func Run(parentCtx context.Context) error {
 	pipeline.Start(ctx, stdout)
 
 	app := &App{
-		cfg:           cfg,
-		conn:          conn,
-		interfaceMap:  interfaceMap,
-		pipeline:      pipeline,
-		detector:      detector,
-		resolver:      resolver,
-		geo:           geoService,
-		threats:       threatService,
-		backup:        backupManager,
-		sampler:       sampler,
-		startTime:     time.Now(),
-		configPath:    cfgPath,
-		alertRules:    rules,
-		alertPath:     alertsPath,
-		whitelist:     whitelist,
-		whitelistPath: whitelistPath,
+		cfg:            cfg,
+		conn:           conn,
+		interfaceMap:   interfaceMap,
+		interfacesPath: interfacePath,
+		pipeline:       pipeline,
+		detector:       detector,
+		resolver:       resolver,
+		geo:            geoService,
+		threats:        threatService,
+		backup:         backupManager,
+		sampler:        sampler,
+		startTime:      time.Now(),
+		configPath:     cfgPath,
+		alertRules:     rules,
+		alertPath:      alertsPath,
+		whitelist:      whitelist,
+		whitelistPath:  whitelistPath,
+		peersCache:     peersCache,
+		peersPath:      peersPath,
 	}
 
 	server := app.startHTTPServer()

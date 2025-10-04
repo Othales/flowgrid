@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -74,10 +76,38 @@ func (a *App) handleRouters(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) handleRouterDetail(w http.ResponseWriter, r *http.Request) {
 	raw := strings.TrimPrefix(r.URL.Path, "/api/routers/")
-	name, err := url.PathUnescape(raw)
-	if err != nil {
-		name = raw
+	if raw == "" {
+		http.Error(w, "rota inválida", http.StatusBadRequest)
+		return
 	}
+	namePart := raw
+	subresource := ""
+	if idx := strings.Index(raw, "/"); idx != -1 {
+		namePart = raw[:idx]
+		subresource = raw[idx+1:]
+	}
+	name, err := url.PathUnescape(namePart)
+	if err != nil {
+		name = namePart
+	}
+
+	if subresource != "" {
+		switch {
+		case subresource == "interfaces":
+			a.handleRouterInterfacesDetail(name, w, r)
+			return
+		case subresource == "peers":
+			a.handleRouterPeersDetail(name, w, r)
+			return
+		case subresource == "peers/refresh":
+			a.handleRouterPeersRefresh(name, w, r)
+			return
+		default:
+			http.Error(w, "recurso não encontrado", http.StatusNotFound)
+			return
+		}
+	}
+
 	switch r.Method {
 	case http.MethodGet:
 		a.configMux.RLock()
@@ -266,26 +296,276 @@ func (a *App) handleDashboardStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleBGPPeers(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		peers := a.flattenPeers()
+		if len(peers) == 0 {
+			a.configMux.RLock()
+			snmpEnabled := a.cfg.SNMPEnabled
+			sources := make([]types.Source, len(a.cfg.Sources))
+			copy(sources, a.cfg.Sources)
+			a.configMux.RUnlock()
+
+			if snmpEnabled && len(sources) > 0 {
+				refreshed, err := a.refreshAllPeers(sources)
+				if err != nil {
+					http.Error(w, "Erro ao consultar peers BGP via SNMP: "+err.Error(), http.StatusBadGateway)
+					return
+				}
+				peers = refreshed
+			}
+		}
+		a.writeJSON(w, peers)
+	case http.MethodPost:
+		a.configMux.RLock()
+		snmpEnabled := a.cfg.SNMPEnabled
+		sources := make([]types.Source, len(a.cfg.Sources))
+		copy(sources, a.cfg.Sources)
+		a.configMux.RUnlock()
+
+		if !snmpEnabled {
+			http.Error(w, "SNMP desabilitado", http.StatusBadRequest)
+			return
+		}
+
+		peers, err := a.refreshAllPeers(sources)
+		if err != nil {
+			http.Error(w, "Erro ao consultar peers BGP via SNMP: "+err.Error(), http.StatusBadGateway)
+			return
+		}
+
+		a.writeJSON(w, peers)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (a *App) handleRouterInterfacesDetail(name string, w http.ResponseWriter, r *http.Request) {
+	if a.interfaceMap == nil {
+		http.Error(w, "SNMP não configurado", http.StatusServiceUnavailable)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		info, ok := a.interfaceMap.SnapshotSource(name)
+		if !ok {
+			http.Error(w, "roteador sem interfaces conhecidas", http.StatusNotFound)
+			return
+		}
+		a.writeJSON(w, info)
+	case http.MethodPut:
+		var payload snmp.SourceInfo
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "json inválido", http.StatusBadRequest)
+			return
+		}
+		a.interfaceMap.UpdateSource(name, &payload)
+		if err := a.saveInterfaces(); err != nil {
+			http.Error(w, "falha ao salvar interfaces: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		a.writeJSON(w, payload)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (a *App) handleRouterPeersDetail(name string, w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		a.writeJSON(w, a.getPeersForRouter(name))
+	case http.MethodPut:
+		var payload []types.BGPNeighbor
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "json inválido", http.StatusBadRequest)
+			return
+		}
+		for i := range payload {
+			payload[i].SourceName = name
+		}
+		if err := a.updatePeersForRouter(name, payload); err != nil {
+			http.Error(w, "falha ao salvar peers: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		a.writeJSON(w, payload)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (a *App) handleRouterPeersRefresh(name string, w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	a.configMux.RLock()
 	snmpEnabled := a.cfg.SNMPEnabled
-	sources := make([]types.Source, len(a.cfg.Sources))
-	copy(sources, a.cfg.Sources)
+	var source *types.Source
+	for i := range a.cfg.Sources {
+		if a.cfg.Sources[i].Name == name {
+			src := a.cfg.Sources[i]
+			source = &src
+			break
+		}
+	}
 	a.configMux.RUnlock()
 
 	if !snmpEnabled {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]types.BGPNeighbor{})
+		http.Error(w, "SNMP desabilitado", http.StatusBadRequest)
+		return
+	}
+	if source == nil {
+		http.Error(w, "roteador não encontrado", http.StatusNotFound)
 		return
 	}
 
+	peers, err := snmp.FetchBGPPeers([]types.Source{*source})
+	if err != nil {
+		http.Error(w, "Erro ao atualizar peers: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+
+	filtered := make([]types.BGPNeighbor, 0, len(peers))
+	for _, peer := range peers {
+		if peer.SourceName == name || peer.SourceName == source.Name {
+			peer.SourceName = name
+			filtered = append(filtered, peer)
+		}
+	}
+
+	if err := a.updatePeersForRouter(name, filtered); err != nil {
+		http.Error(w, "falha ao salvar peers: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	a.writeJSON(w, filtered)
+}
+
+func (a *App) refreshAllPeers(sources []types.Source) ([]types.BGPNeighbor, error) {
 	peers, err := snmp.FetchBGPPeers(sources)
 	if err != nil {
-		http.Error(w, "Erro ao consultar peers BGP via SNMP: "+err.Error(), http.StatusBadGateway)
-		return
+		return nil, err
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(peers)
+	grouped := make(map[string][]types.BGPNeighbor)
+	for _, peer := range peers {
+		key := peer.SourceName
+		grouped[key] = append(grouped[key], peer)
+	}
+
+	a.peersMux.Lock()
+	if a.peersCache == nil {
+		a.peersCache = make(map[string][]types.BGPNeighbor)
+	}
+	for name, list := range grouped {
+		for i := range list {
+			list[i].SourceName = name
+		}
+		a.peersCache[name] = list
+	}
+	flattened := a.flattenPeersLocked()
+	if err := a.savePeersLocked(); err != nil {
+		a.peersMux.Unlock()
+		return nil, err
+	}
+	a.peersMux.Unlock()
+	return flattened, nil
+}
+
+func (a *App) updatePeersForRouter(name string, peers []types.BGPNeighbor) error {
+	a.peersMux.Lock()
+	defer a.peersMux.Unlock()
+	if a.peersCache == nil {
+		a.peersCache = make(map[string][]types.BGPNeighbor)
+	}
+	normalized := make([]types.BGPNeighbor, len(peers))
+	copy(normalized, peers)
+	for i := range normalized {
+		normalized[i].SourceName = name
+	}
+	a.peersCache[name] = normalized
+	return a.savePeersLocked()
+}
+
+func (a *App) getPeersForRouter(name string) []types.BGPNeighbor {
+	a.peersMux.RLock()
+	defer a.peersMux.RUnlock()
+	list := a.peersCache[name]
+	result := make([]types.BGPNeighbor, len(list))
+	copy(result, list)
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].PeerIP == result[j].PeerIP {
+			return result[i].RemoteAS < result[j].RemoteAS
+		}
+		return result[i].PeerIP < result[j].PeerIP
+	})
+	return result
+}
+
+func (a *App) flattenPeers() []types.BGPNeighbor {
+	a.peersMux.RLock()
+	defer a.peersMux.RUnlock()
+	return a.flattenPeersLocked()
+}
+
+func (a *App) flattenPeersLocked() []types.BGPNeighbor {
+	total := 0
+	for _, list := range a.peersCache {
+		total += len(list)
+	}
+	result := make([]types.BGPNeighbor, 0, total)
+	for name, list := range a.peersCache {
+		for _, peer := range list {
+			peer.SourceName = name
+			result = append(result, peer)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].SourceName == result[j].SourceName {
+			return result[i].PeerIP < result[j].PeerIP
+		}
+		return result[i].SourceName < result[j].SourceName
+	})
+	return result
+}
+
+func (a *App) interfacesFile() string {
+	if a.interfacesPath != "" {
+		return a.interfacesPath
+	}
+	return "interfaces.json"
+}
+
+func (a *App) saveInterfaces() error {
+	if a.interfaceMap == nil {
+		return nil
+	}
+	return a.interfaceMap.SaveToFile(a.interfacesFile())
+}
+
+func (a *App) peersFile() string {
+	if a.peersPath != "" {
+		return a.peersPath
+	}
+	return "peers.json"
+}
+
+func (a *App) savePeersLocked() error {
+	path := a.peersFile()
+	if path == "" {
+		path = "peers.json"
+	}
+	data, err := json.MarshalIndent(a.peersCache, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 func (a *App) syncSourceRename(oldName, newName string) {
@@ -307,7 +587,24 @@ func (a *App) syncSourceRename(oldName, newName string) {
 		}
 		if a.interfaceMap != nil {
 			a.interfaceMap.RenameSource(oldName, newName)
+			if err := a.saveInterfaces(); err != nil {
+				log.Printf("falha ao salvar interfaces ao renomear %s -> %s: %v", oldName, newName, err)
+			}
 		}
+		a.peersMux.Lock()
+		if a.peersCache != nil {
+			if list, ok := a.peersCache[oldName]; ok {
+				delete(a.peersCache, oldName)
+				for i := range list {
+					list[i].SourceName = newName
+				}
+				a.peersCache[newName] = list
+				if err := a.savePeersLocked(); err != nil {
+					log.Printf("falha ao salvar peers ao renomear %s -> %s: %v", oldName, newName, err)
+				}
+			}
+		}
+		a.peersMux.Unlock()
 	}()
 }
 

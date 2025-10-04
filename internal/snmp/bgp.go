@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -71,7 +72,7 @@ func FetchBGPPeers(sources []types.Source) ([]types.BGPNeighbor, error) {
 	})
 
 	if len(neighbors) == 0 && len(failures) > 0 {
-		return nil, fmt.Errorf(strings.Join(failures, "; "))
+		return nil, errors.New(strings.Join(failures, "; "))
 	}
 
 	return neighbors, nil

@@ -67,6 +67,7 @@ func (bm *BackupManager) StartScheduler(ctx context.Context) {
 func (bm *BackupManager) Create() {
 	files := []string{
 		"interfaces.json",
+		"peers.json",
 		"configs/config.json",
 		"configs/alert_rules.json",
 		"configs/whitelist.json",

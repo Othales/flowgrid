@@ -247,68 +247,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-12">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <h2 class="h5">Teste SNMP</h2>
-                                                <form id="snmp-test-form" class="row g-3">
-                                                    <div class="col-md-3">
-                                                        <label class="form-label" for="snmp-test-ip">IP</label>
-                                                        <input class="form-control" id="snmp-test-ip" placeholder="192.0.2.1" required />
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <label class="form-label" for="snmp-test-port">Porta</label>
-                                                        <input class="form-control" id="snmp-test-port" type="number" value="161" min="1" max="65535" />
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <label class="form-label" for="snmp-test-version">Versão</label>
-                                                        <select class="form-select" id="snmp-test-version">
-                                                            <option value="2c">SNMP v2c</option>
-                                                            <option value="3">SNMP v3</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="col-md-2">
-                                                        <label class="form-label" for="snmp-test-community">Community</label>
-                                                        <input class="form-control" id="snmp-test-community" value="public" />
-                                                    </div>
-                                                    <div class="col-md-3">
-                                                        <label class="form-label" for="snmp-test-user">Usuário (v3)</label>
-                                                        <input class="form-control" id="snmp-test-user" placeholder="snmpuser" />
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <label class="form-label" for="snmp-test-auth">Autenticação (v3)</label>
-                                                        <div class="d-flex gap-2">
-                                                            <select class="form-select" id="snmp-test-auth">
-                                                                <option value="">Nenhum</option>
-                                                                <option value="MD5">MD5</option>
-                                                                <option value="SHA">SHA</option>
-                                                                <option value="SHA256">SHA-256</option>
-                                                                <option value="SHA512">SHA-512</option>
-                                                            </select>
-                                                            <input class="form-control" id="snmp-test-authpass" placeholder="Senha" />
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <label class="form-label" for="snmp-test-priv">Privacidade (v3)</label>
-                                                        <div class="d-flex gap-2">
-                                                            <select class="form-select" id="snmp-test-priv">
-                                                                <option value="">Nenhum</option>
-                                                                <option value="DES">DES</option>
-                                                                <option value="AES">AES</option>
-                                                                <option value="AES192">AES-192</option>
-                                                                <option value="AES256">AES-256</option>
-                                                            </select>
-                                                            <input class="form-control" id="snmp-test-privpass" placeholder="Senha" />
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-12 text-end">
-                                                        <button class="btn btn-outline-light" type="submit">Executar teste</button>
-                                                    </div>
-                                                </form>
-                                                <div class="form-text" id="snmp-test-result"></div>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                             <div class="tab-pane fade" id="tab-alerts" role="tabpanel">
@@ -843,7 +781,7 @@
     </div>
 
     <div class="modal fade" id="alert-modal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
             <div class="modal-content">
                 <form id="alert-form">
                     <div class="modal-header">
@@ -878,11 +816,22 @@
                                 <div class="d-flex align-items-center mb-3 gap-2">
                                     <div class="badge bg-success rounded-pill p-2"><i class="fa-solid fa-filter"></i></div>
                                     <div>
-                                        <h3 class="h6 mb-0">Filtros</h3>
-                                        <small class="text-secondary">Combine campos sugeridos para montar o critério.</small>
+                                        <h3 class="h6 mb-0">Critérios e limites</h3>
+                                        <small class="text-secondary">Combine filtros e defina limites agregados para disparar a regra.</small>
                                     </div>
                                 </div>
-                                <div class="row g-3">
+                                <div class="d-flex align-items-center flex-wrap gap-3 mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-secondary small text-uppercase">Operador entre filtros</span>
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Operador lógico">
+                                            <input class="btn-check" type="radio" name="alert-filter-join" id="filter-join-and" value="AND" checked />
+                                            <label class="btn btn-outline-light" for="filter-join-and">AND</label>
+                                            <input class="btn-check" type="radio" name="alert-filter-join" id="filter-join-or" value="OR" />
+                                            <label class="btn btn-outline-light" for="filter-join-or">OR</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row g-3 align-items-start">
                                     <div class="col-12">
                                         <div class="d-flex flex-wrap gap-2 mb-2" id="alert-filter-suggestions">
                                             <button type="button" class="btn btn-sm btn-outline-light" data-filter="SrcAddr">SrcAddr</button>
@@ -892,23 +841,18 @@
                                             <button type="button" class="btn btn-sm btn-outline-light" data-filter="Proto">Proto</button>
                                             <button type="button" class="btn btn-sm btn-outline-light" data-filter="Bytes">Bytes</button>
                                             <button type="button" class="btn btn-sm btn-outline-light" data-filter="Packets">Packets</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="Bps">Bps</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="SrcASN">SrcASN</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="DstASN">DstASN</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="Country">Country</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" data-filter="ThreatCategory">ThreatCategory</button>
                                         </div>
-                                        <textarea class="form-control" id="alert-filter" rows="2" placeholder="DstPort=53"></textarea>
+                                        <textarea class="form-control" id="alert-filter" rows="2" placeholder="SrcAddr=198.51.100.10"></textarea>
                                     </div>
-                                </div>
-                            </div>
-                            <div class="border rounded-3 p-3">
-                                <div class="d-flex align-items-center mb-3 gap-2">
-                                    <div class="badge bg-warning text-dark rounded-pill p-2"><i class="fa-solid fa-scale-balanced"></i></div>
-                                    <div>
-                                        <h3 class="h6 mb-0">Condição</h3>
-                                        <small class="text-secondary">Defina os limites para disparar o alerta.</small>
-                                    </div>
-                                </div>
-                                <div class="row g-3 align-items-end">
                                     <div class="col-lg-6">
-                                        <label class="form-label" for="alert-condition">Expressão</label>
-                                        <input class="form-control" id="alert-condition" placeholder="bytes > 1000000" />
+                                        <label class="form-label" for="alert-condition">Limite agregado (opcional)</label>
+                                        <input class="form-control" id="alert-condition" placeholder="Bps > 1000000" />
+                                        <div class="form-text">Ex.: Bps &gt; 1000000 OR UniqueSrcIPs &gt; 100.</div>
                                     </div>
                                     <div class="col-lg-3">
                                         <label class="form-label" for="alert-window">Janela (seg)</label>
@@ -955,6 +899,28 @@
                         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk me-2"></i><span id="alert-submit-label">Criar fluxo</span></button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="json-editor-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable modal-fullscreen-sm-down">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="json-modal-title">Editor JSON</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea class="form-control font-monospace" id="json-modal-textarea" rows="18" spellcheck="false"></textarea>
+                    <div class="form-text mt-2" id="json-modal-feedback"></div>
+                </div>
+                <div class="modal-footer justify-content-between flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-primary d-none" id="json-modal-refresh"><i class="fa-solid fa-rotate me-2"></i>Atualizar via SNMP</button>
+                    <div class="d-flex gap-2 ms-auto">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+                        <button type="button" class="btn btn-primary" id="json-modal-save"><i class="fa-solid fa-floppy-disk me-2"></i>Salvar alterações</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

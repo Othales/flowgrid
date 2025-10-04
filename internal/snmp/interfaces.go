@@ -57,6 +57,24 @@ func (im *InterfaceMap) GetSource(sourceName string) (*SourceInfo, bool) {
 	return info, ok
 }
 
+func (im *InterfaceMap) SnapshotSource(sourceName string) (*SourceInfo, bool) {
+	im.mu.RLock()
+	defer im.mu.RUnlock()
+	src, ok := im.data[sourceName]
+	if !ok || src == nil {
+		return nil, false
+	}
+	copied := &SourceInfo{
+		Vendor:     src.Vendor,
+		SourceIP:   src.SourceIP,
+		Interfaces: make(map[uint32]InterfaceInfo, len(src.Interfaces)),
+	}
+	for idx, iface := range src.Interfaces {
+		copied.Interfaces[idx] = iface
+	}
+	return copied, true
+}
+
 func (im *InterfaceMap) Len() int {
 	im.mu.RLock()
 	defer im.mu.RUnlock()
@@ -88,6 +106,27 @@ func (im *InterfaceMap) ReplaceData(newData map[string]*SourceInfo) {
 	im.mu.Lock()
 	defer im.mu.Unlock()
 	im.data = newData
+}
+
+func (im *InterfaceMap) UpdateSource(sourceName string, info *SourceInfo) {
+	im.mu.Lock()
+	defer im.mu.Unlock()
+	if im.data == nil {
+		im.data = make(map[string]*SourceInfo)
+	}
+	if info == nil {
+		delete(im.data, sourceName)
+		return
+	}
+	copied := &SourceInfo{
+		Vendor:     info.Vendor,
+		SourceIP:   info.SourceIP,
+		Interfaces: make(map[uint32]InterfaceInfo, len(info.Interfaces)),
+	}
+	for idx, iface := range info.Interfaces {
+		copied.Interfaces[idx] = iface
+	}
+	im.data[sourceName] = copied
 }
 
 func (im *InterfaceMap) RenameSource(oldName, newName string) {
